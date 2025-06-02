@@ -1,0 +1,42 @@
+:root {
+    --cvsu-green: #006837;
+    --cvsu-green-light: #2d8653;
+    --cvsu-gold: #FFB81C;
+}
+
+.student-avatar {
+    background: linear-gradient(135deg, var(--cvsu-green), var(--cvsu-green-light));
+}
+
+.course-badge {
+    background: linear-gradient(135deg, var(--cvsu-green)/10, var(--cvsu-green-light)/10);
+    color: var(--cvsu-green);
+}
+
+.table-row-animate {
+    transition: all 0.2s ease-in-out;
+}
+
+.table-row-animate:hover {
+    transform: translateX(4px);
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--cvsu-green-light);
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--cvsu-green);
+}

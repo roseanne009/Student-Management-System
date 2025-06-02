@@ -1,0 +1,190 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load custom_filters %}
+
+{% block title %}Grades for {{ activity.subject.subject_code }} - {{ activity.subject.subject_title }}{% endblock %}
+{% block content %}
+<div class="min-h-screen p-6 bg-gradient-to-br from-gray-50 to-gray-100">
+    <!-- Back Button -->
+    <div class="mb-6">
+        <button onclick="history.back()"  class="text-gray-600 hover:text-gray-800 flex items-center gap-2">
+            <i class="fas fa-arrow-left"></i>
+            <span>Back to Subject Info</span>
+        </button>
+    </div>
+    <!-- Main Content -->
+    <div class="bg-white rounded-xl shadow-sm">
+        <!-- Header -->
+        <div class="p-6 border-b border-gray-200">
+            <div class="flex justify-between items-center">
+                <div>
+                    <h1 class="text-2xl font-semibold">Grades</h1>
+                    <p class="text-gray-600">{{ activity.subject.subject_code }} - {{ activity.subject.subject_title }}</p>
+                    <p class="text-gray-600">{{ activity.activity_name }} - {{ activity.activity_type }}</p>
+                </div>
+                <div class="flex items-center gap-4">
+                    <p class="text-gray-600">Total Items: <span class="font-bold">{{ activity.total_items }}</span></p>
+                    <button id="editGrades" 
+                            class="px-4 py-2 text-[#006837] hover:bg-gray-100 rounded-lg transition-colors">
+                        <i class="fas fa-edit mr-2"></i>
+                        <span>Edit</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+            <form id="gradesForm">
+                {% csrf_token %}
+                <div class="overflow-x-auto">
+                    <table class="min-w-full">
+                        <thead class="bg-green-700">
+                            <tr>
+                                <th class="px-6 py-3 text-center text-xs font-medium text-white uppercase">Student ID</th>
+                                <th class="px-6 py-3 text-center text-xs font-medium text-white uppercase">Name</th>
+                                <th class="px-6 py-3 text-center text-xs font-medium text-white uppercase">Grade</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-200">
+                            {% for enrollment in enrollments %}
+                            <tr>
+                                <td class="px-6 py-4 text-center">{{ enrollment.student.student_id }}</td>
+                                <td class="px-6 py-4 text-center">{{ enrollment.student.last_name }}, {{ enrollment.student.first_name }}</td>
+                                <td class="px-6 py-4 text-center">
+                                    <input type="text" 
+                                           class="grade-input w-24 px-3 py-1 rounded-lg border border-gray-300 focus:ring-2 focus:ring-[#006837]/20 focus:border-[#006837] bg-gray-50"
+                                           data-student-id="{{ enrollment.student.student_id }}"
+                                           value="{{ enrollment.grade|default:'N/A' }}"
+                                           readonly>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="3" class="px-6 py-4 text-center text-gray-500">No students enrolled in this subject.</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </form>
+    </div>
+
+    <!-- Save Changes Bar (Initially Hidden) -->
+    <div id="saveChangesBar" 
+         class="fixed bottom-6 left-1/2 transform -translate-x-1/2 transition-all duration-300 opacity-0 invisible">
+        <div class="bg-white rounded-xl shadow-lg px-6 py-4 flex items-center gap-4">
+            <button id="cancelEdit" 
+                    class="px-6 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors">
+                Cancel
+            </button>
+            <button id="saveGrades" 
+                    class="px-6 py-2 bg-[#006837] text-white rounded-lg hover:bg-[#2d8653] transition-colors">
+                Save Changes
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+let isEditMode = false;
+
+function toggleEditMode(enable) {
+    isEditMode = enable;
+    const inputs = document.querySelectorAll('.grade-input');
+    const saveBar = document.getElementById('saveChangesBar');
+    const editBtn = document.getElementById('editGrades');
+    
+    inputs.forEach(input => {
+        input.readOnly = !isEditMode;
+        if (isEditMode) {
+            input.classList.remove('bg-gray-50');
+            input.classList.add('bg-white');
+            if (input.value === 'N/A') {
+                input.value = '';
+            }
+        } else {
+            input.classList.add('bg-gray-50');
+            input.classList.remove('bg-white');
+            if (!input.value.trim()) {
+                input.value = 'N/A';
+            }
+        }
+    });
+
+    // Toggle save changes bar
+    if (isEditMode) {
+        saveBar.classList.remove('opacity-0', 'invisible');
+        editBtn.classList.add('hidden');
+    } else {
+        saveBar.classList.add('opacity-0', 'invisible');
+        editBtn.classList.remove('hidden');
+    }
+}
+
+document.getElementById('editGrades').addEventListener('click', () => toggleEditMode(true));
+
+document.getElementById('saveGrades').addEventListener('click', function() {
+    const grades = [];
+    let hasEmptyGrades = false;
+    
+    document.querySelectorAll('.grade-input').forEach(input => {
+        const value = input.value.trim();
+        if (!value || value === 'N/A') {
+            hasEmptyGrades = true;
+        }
+        grades.push({
+            student_id: input.dataset.studentId,
+            grade: value || 'N/A'
+        });
+    });
+
+    if (hasEmptyGrades) {
+        if (!confirm('Some students have no grades (N/A). Do you want to continue saving?')) {
+            return;
+        }
+    }
+
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+    fetch(`/api/activities/${encodeURIComponent('{{ activity.activity_id }}')}/grades/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrfToken
+        },
+        body: JSON.stringify({
+            grades: grades
+        }),
+        credentials: 'include'
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+            return response.json();
+        }
+        throw new Error('Server response was not JSON');
+    })
+    .then(data => {
+        if (data.status === 'success') {
+            alert('Grades saved successfully!');
+            toggleEditMode(false);
+            location.reload();
+        } else {
+            throw new Error(data.message || 'Failed to save grades');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Failed to save grades: ' + error.message);
+    });
+});
+
+document.getElementById('cancelEdit').addEventListener('click', function() {
+    if (confirm('Are you sure you want to cancel? Any unsaved changes will be lost.')) {
+        toggleEditMode(false);
+        location.reload();
+    }
+});
+</script>
+{% endblock %}

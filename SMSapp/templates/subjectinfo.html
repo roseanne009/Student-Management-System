@@ -1,0 +1,1094 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load custom_filters %}
+{% block title %}Subject Info - {{ subject.subject_code }}{% endblock %}
+{% block content %}
+<div class="min-h-screen p-6 bg-gradient-to-br from-gray-50 to-gray-100">
+    <!-- Back Button -->
+    <div class="mb-6">
+        <a href="{% url 'subjects' %}" class="text-gray-600 hover:text-gray-800 flex items-center gap-2">
+            <i class="fas fa-arrow-left"></i>
+            <span>Back to Subjects</span>
+        </a>
+    </div>
+    
+    <!-- Subject Header Card -->
+    <div class="bg-white rounded-2xl shadow-sm overflow-hidden mb-6">
+        <div class="relative p-6 bg-gradient-to-br from-green-300 to-green-50 ">
+            <div class="grid grid-cols-3 gap-6">
+                <!-- Subject Info -->
+                <div class="col-span-2 relative z-10 border-r border-gray-500">
+                    <div class="flex items-start gap-4 pl-2">
+                        <div>
+                            <h1 class="text-3xl font-bold text-gray-800">{{ subject.subject_code }}</h1>
+                            <p class="text-gray-600 mt-1 text-lg">{{ subject.subject_title }}</p>
+                        </div>
+                    </div>
+                    
+                    <!-- Subject Details Grid -->
+                    <div class="grid grid-cols-3 gap-4 mt-4 text0">
+                        <div class="p-2">
+                            <p class="text-sm text-gray-500 mb-1">Course</p>
+                            <p class="font-semibold text-gray-800">{{ subject.course.course_abv }}</p>
+                        </div>
+                        <div class="p-2 rounded-xl">
+                            <p class="text-sm text-gray-500 mb-1">Year Level</p>
+                            <p class="font-semibold text-gray-800">Year {{ subject.year_level }}</p>
+                        </div>
+                        <div class="p-2">
+                            <p class="text-sm text-gray-500 mb-1">Section</p>
+                            <p class="font-semibold text-gray-800">{{ subject.section }}</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Stats Card -->
+                <div class="p-6 relative overflow-hidden text-right">
+                    <div class="relative z-10">
+                        <p class="text-sm font-medium text-gray-600 mb-1">Activities to Grade</p>
+                        <h3 class="text-6xl font-bold text-gray-800">
+                            {{ pending_activities|default:"0" }}
+                        </h3>
+                        <p class="text-sm text-gray-500 mt-2">Pending</p>
+                    </div>
+                </div>
+            </div>
+            <div class="absolute bottom-0 right-0 w-32 h-32 bg-gradient-to-bl from-[#006837]/5 to-transparent rounded-tl-full"></div>
+        </div>
+    </div>
+
+    <!-- Navigation Tabs -->
+    <div class="flex gap-2 mb-6">
+        <button id="classworkBtn" 
+                class="px-3 py-3 rounded-xl font-medium transition-all duration-200 bg-white shadow-sm hover:shadow-md flex items-center gap-2">
+            <i class="fas fa-book-open"></i>
+            <span>Classworks</span>
+        </button>
+        <button id="studentsBtn"
+                class="px-3 py-3 rounded-xl font-medium transition-all duration-200 bg-white shadow-sm hover:shadow-md flex items-center gap-2">
+            <i class="fas fa-users"></i>
+            <span>People</span>
+        </button>
+    </div>
+
+    <!-- Content Sections -->
+    <div id="classworkSection" class="bg-white rounded-2xl shadow-sm overflow-hidden">
+        <div class="p-6 border-b border-gray-100">
+            <div class="flex justify-between items-center">
+                <div class="flex items-center gap-4">
+                    <h3 class="text-xl font-semibold text-gray-800">Classwork</h3>
+                    <select id="activityFilter" 
+                            class="px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-[#006837]/20 focus:border-[#006837]" 
+                            onchange="filterActivities()">
+                        <option value="all">All Types</option>
+                        <option value="Quiz">Quizzes</option>
+                        <option value="Activities">Activities</option>
+                        <option value="Exam">Exams</option>
+                        <option value="Project">Projects</option>
+                    </select>
+                </div>
+                <button onclick="openClassworkModal()" 
+                        class="px-4 py-2 bg-[#006837] text-white rounded-xl hover:bg-[#2d8653] transition-colors flex items-center gap-2">
+                    <i class="fas fa-plus"></i>
+                    <span>Add Classwork</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Activities Table with modern styling -->
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead class="bg-green-700 border-b border-gray-100">
+                    <tr>
+                        <th class="px-6 py-3 text-center text-xs font-medium text-white uppercase">Activity Name</th>
+                        <th class="px-6 py-3 text-center text-xs font-medium text-white uppercase">Type</th>
+                        <th class="px-6 py-3 text-center text-xs font-medium text-white uppercase">Graded Students</th>
+                        <th class="px-6 py-3 text-center text-xs font-medium text-white uppercase">Total Score</th>
+                        <th class="px-6 py-3 text-center text-xs font-medium text-white uppercase">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                    {% for activity in activities %}
+                    <tr class="activity-row" data-type="{{ activity.activity_type }}">
+                        <td class="px-6 py-4 text-center">
+                            <a href="{% url 'grades' activity.activity_id %}" 
+                               class="text-blue-600 hover:text-blue-800">
+                                {{ activity.activity_name }}
+                            </a>
+                            {% if activity.is_pending %}
+                                <span class="ml-2 px-2 py-1 text-xs bg-yellow-100 text-yellow-800 rounded-full">
+                                    Pending
+                                </span>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4 text-center">{{ activity.activity_type }}</td>
+                        <td class="px-6 py-4 text-center">
+                            {{ activity.graded_count }}/{{ total_students }}
+                            {% if activity.is_pending %}
+                                <span class="text-yellow-600 text-xs">
+                                    ({{ total_students|sub:activity.graded_count }} pending)
+                                </span>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4 text-center">
+                            {{ activity.total_items }}
+                        </td>
+                        <td class="px-6 py-4 text-center">
+                            <button onclick="editActivity({{ activity.activity_id }})" class="text-blue-500 hover:text-blue-300 mr-3"><i class="fas fa-edit"></i></button>
+                            <button onclick="deleteActivity({{ activity.activity_id }})" class="text-red-500 hover:text-red-300"><i class="fas fa-trash"></i></button>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="px-6 py-4 text-center text-gray-500" id="noActivitiesRow">
+                            No classwork found
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Add Classwork Modal -->
+    <div class="modal fade" id="addClassworkModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered" style="max-width: 500px; width: 95%;">
+            <div class="modal-content bg-white rounded-2xl shadow-2xl border-0">
+                <div class="p-6 border-b border-gray-100">
+                    <div class="flex justify-between items-center">
+                        <h3 class="text-2xl font-bold text-gray-800">Add New Classwork</h3>
+                        <button type="button" class="text-gray-400 hover:text-gray-600 transition-colors" data-bs-dismiss="modal">
+                            <i class="fas fa-times text-lg"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="p-6">
+                    <form id="classworkForm">
+                        {% csrf_token %}
+                        <input type="hidden" name="subject" value="{{ subject.subject_code }}">
+                        <div class="space-y-6">
+                            <div class="form-field">
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Activity Type</label>
+                                <select name="activity_type" 
+                                        class="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-[#006837]/20 focus:border-[#006837] transition-all" 
+                                        required>
+                                    <option value="">Select Type</option>
+                                    <option value="Quiz">Quiz</option>
+                                    <option value="Activities">Activities</option>
+                                    <option value="Exam">Exam</option>
+                                    <option value="Project">Project</option>
+                                </select>
+                            </div>
+                            <div class="form-field">
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Activity Name</label>
+                                <input type="text" 
+                                       name="activity_name" 
+                                       class="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-[#006837]/20 focus:border-[#006837] transition-all" 
+                                       required>
+                            </div>
+                            <div class="form-field">
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Total Score</label>
+                                <input type="number" 
+                                       name="total_items" 
+                                       class="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-[#006837]/20 focus:border-[#006837] transition-all" 
+                                       min="1" 
+                                       required>
+                            </div>
+                        </div>
+                        <div class="flex justify-end items-center gap-3 mt-8 pt-6 border-t border-gray-100">
+                            <button type="button" 
+                                    class="px-6 py-2.5 rounded-xl border border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors" 
+                                    data-bs-dismiss="modal">Cancel</button>
+                            <button type="submit" 
+                                    class="px-6 py-2.5 rounded-xl bg-[#006837] text-white hover:bg-[#2d8653] transition-colors">
+                                Save Classwork
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Classwork Modal -->
+    <div class="modal fade" id="editClassworkModal" data-bs-backdrop="static" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered" style="max-width: 500px; width: 95%;">
+            <div class="modal-content bg-white rounded-2xl shadow-2xl border-0">
+                <div class="p-6 border-b border-gray-100">
+                    <div class="flex justify-between items-center">
+                        <h3 class="text-2xl font-bold text-gray-800">Edit Classwork</h3>
+                        <button type="button" class="text-gray-400 hover:text-gray-600 transition-colors" data-bs-dismiss="modal">
+                            <i class="fas fa-times text-lg"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="p-6">
+                    <form id="editClassworkForm">
+                        {% csrf_token %}
+                        <input type="hidden" name="activity_id" id="edit_activity_id">
+                        <input type="hidden" name="subject" value="{{ subject.subject_code }}">
+                        <div class="space-y-6">
+                            <div class="form-field">
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Activity Type</label>
+                                <select id="edit_activity_type" name="activity_type" class="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-[#006837]/20 focus:border-[#006837] transition-all" required>
+                                    <option value="">Select Type</option>
+                                    <option value="Quiz">Quiz</option>
+                                    <option value="Activities">Activities</option>
+                                    <option value="Exam">Exam</option>
+                                    <option value="Project">Project</option>
+                                </select>
+                            </div>
+                            <div class="form-field">
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Activity Name</label>
+                                <input type="text" id="edit_activity_name" name="activity_name" class="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-[#006837]/20 focus:border-[#006837] transition-all" required>
+                            </div>
+                            <div class="form-field">
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Total Score</label>
+                                <input type="number" 
+                                       id="edit_total_items" 
+                                       name="total_items" 
+                                       class="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-[#006837]/20 focus:border-[#006837] transition-all" 
+                                       min="1" 
+                                       required>
+                            </div>
+                        </div>
+                        <div class="flex justify-end items-center gap-3 mt-8 pt-6 border-t border-gray-100">
+                            <button type="button" 
+                                    class="px-6 py-2.5 rounded-xl border border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors" 
+                                    data-bs-dismiss="modal">Cancel</button>
+                            <button type="submit" 
+                                    class="px-6 py-2.5 rounded-xl bg-[#006837] text-white hover:bg-[#2d8653] transition-colors">
+                                Update Classwork
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Students Section -->
+    <div id="studentsSection" class="bg-white rounded-2xl shadow-sm overflow-hidden">
+        <div class="p-6 border-b border-gray-100">
+            <div class="flex justify-between items-center">
+                <div class="flex items-center gap-4">
+                    <h3 class="text-xl font-semibold text-gray-800">Students</h3>
+                </div>
+                <button onclick="openEnrollmentModal()" 
+                        class="px-4 py-2 bg-[#006837] text-white rounded-xl hover:bg-[#2d8653] transition-colors flex items-center gap-2">
+                    <i class="fas fa-plus"></i>
+                    <span>Add Student</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Students Table -->
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead class="bg-green-700 border-b border-gray-100">
+                    <tr>
+                        <th class="px-6 py-3 text-center text-xs font-medium text-white uppercase">Name</th>
+                        <th class="px-6 py-3 text-center text-xs font-medium text-white uppercase">Student ID</th>
+                        <th class="px-6 py-3 text-center text-xs font-medium text-white uppercase">Course</th>
+                        <th class="px-6 py-3 text-center text-xs font-medium text-white uppercase">Year & Section</th>
+                        <th class="px-6 py-3 text-center text-xs font-medium text-white uppercase">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100" id="enrolledStudentsTable">
+                    {% for enrollment in enrolled_students %}
+                    <tr class="hover:bg-gray-50 transition-colors">
+                        <td class="px-6 py-4 whitespace-nowrap text-left">
+                            <div class="flex items-center">
+                                <div class="h-8 w-8 rounded-full bg-[#006837] flex items-center justify-center text-white font-medium text-sm">
+                                    {{ enrollment.student.first_name|slice:":1" }}{{ enrollment.student.last_name|slice:":1" }}
+                                </div>
+                                <div class="ml-3">
+                                    <div class="text-sm font-medium text-gray-900">{{ enrollment.student.last_name }}, {{ enrollment.student.first_name }}</div>
+                                    <div class="text-sm text-gray-500">{{ enrollment.student.middle_name }}</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-center">
+                            <span class="text-sm font-medium text-gray-900">{{ enrollment.student.student_id }}</span>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-center">
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                {{ enrollment.student.course.course_abv }}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">
+                            Year {{ enrollment.student.year_level }} - {{ enrollment.student.section }}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-center">
+                            <button onclick="removeStudent('{{ enrollment.student.student_id }}')" 
+                                    class="text-red-600 hover:text-red-900 transition-colors">
+                                <i class="fas fa-user-minus"></i>
+                            </button>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="px-6 py-4 text-center text-gray-500">No students enrolled</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Add Student Enrollment Modal -->
+    <div class="modal fade" id="enrollmentModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content bg-white rounded-2xl shadow-2xl border-0">
+                <div class="p-6 border-b border-gray-100">
+                    <div class="flex justify-between items-center">
+                        <h3 class="text-2xl font-bold text-gray-800">Enroll Students</h3>
+                        <button type="button" class="text-gray-400 hover:text-gray-600 transition-colors" data-bs-dismiss="modal">
+                            <i class="fas fa-times text-lg"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="p-6">
+                    <!-- Filters -->
+                    <div class="flex gap-4 mb-6">
+                        <input type="text" 
+                               id="studentSearch" 
+                               placeholder="Search by ID or name..." 
+                               class="px-4 py-2 rounded-xl border border-gray-200 text-sm flex-grow">
+                    </div>
+
+                    <!-- Students Table -->
+                    <div class="overflow-x-auto max-h-96">
+                        <table class="w-full">
+                            <thead class="bg-green-700 sticky top-0">
+                                <tr>
+                                    <th class="w-16 px-6 py-3">
+                                        <input type="checkbox" id="selectAll" class="rounded border-gray-300">
+                                    </th>
+                                    <th class="px-6 py-3 text-center text-xs font-medium text-white uppercase">Name</th>
+                                    <th class="px-6 py-3 text-center text-xs font-medium text-white uppercase">Student ID</th>
+                                    <th class="px-6 py-3 text-center text-xs font-medium text-white uppercase">Course</th>
+                                    <th class="px-6 py-3 text-center text-xs font-medium text-white uppercase">Year</th>
+                                    <th class="px-6 py-3 text-center text-xs font-medium text-white uppercase">Section</th>
+                                    <th class="px-6 py-3 text-center text-xs font-medium text-white uppercase">Status</th>
+                                
+                                </tr>
+                            </thead>
+                            <tbody id="studentsList" class="divide-y divide-gray-100">
+                                <!-- Students will be loaded here dynamically -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="p-6 border-t border-gray-100">
+                    <div class="flex justify-end gap-3">
+                        <button type="button" 
+                                class="px-6 py-2.5 rounded-xl border border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors" 
+                                data-bs-dismiss="modal">Cancel</button>
+                        <button onclick="enrollSelectedStudents()" 
+                                class="px-6 py-2.5 rounded-xl bg-[#006837] text-white hover:bg-[#2d8653] transition-colors">
+                            Enroll Selected Students
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function getCSRFToken() {
+    return document.querySelector('[name=csrfmiddlewaretoken]').value;
+}
+
+function handleResponse(response) {
+    if (!response.ok) {
+        return response.json().then(err => Promise.reject(err));
+    }
+    return response.json();
+}
+
+const classworkBtn = document.getElementById('classworkBtn');
+const studentsBtn = document.getElementById('studentsBtn');
+const classworkSection = document.getElementById('classworkSection');
+const studentsSection = document.getElementById('studentsSection');
+
+function setActiveButton(activeBtn, inactiveBtn) {
+    activeBtn.classList.add('bg-[#006837]', 'text-white');
+    activeBtn.classList.remove('text-gray-500', 'bg-white');
+    inactiveBtn.classList.remove('bg-[#006837]', 'text-white');
+    inactiveBtn.classList.add('text-gray-500', 'bg-white');
+}
+
+classworkBtn.addEventListener('click', function() {
+    setActiveButton(classworkBtn, studentsBtn);
+    classworkSection.classList.remove('hidden');
+    studentsSection.classList.add('hidden');
+});
+
+studentsBtn.addEventListener('click', function() {
+    setActiveButton(studentsBtn, classworkBtn);
+    studentsSection.classList.remove('hidden');
+    classworkSection.classList.add('hidden');
+});
+
+// Show classwork by default
+classworkBtn.click();
+
+function openClassworkModal() {
+    document.getElementById('classworkForm').reset();
+    const modal = new bootstrap.Modal(document.getElementById('addClassworkModal'));
+    modal.show();
+}
+
+document.getElementById('classworkForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const formData = new FormData(this);
+    const data = {
+        subject: formData.get('subject'),
+        activity_type: formData.get('activity_type'),
+        activity_name: formData.get('activity_name'),
+        total_items: parseInt(formData.get('total_items'), 10)
+    };
+
+    fetch('/api/activities/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCSRFToken(),
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            bootstrap.Modal.getInstance(document.getElementById('addClassworkModal')).hide();
+            window.location.reload();
+        } else {
+            throw new Error(data.message || 'Failed to add classwork');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert(error.message || 'Failed to add classwork. Please try again.');
+    });
+});
+
+function filterActivities() {
+    const filterValue = document.getElementById('activityFilter').value;
+    const rows = document.querySelectorAll('.activity-row');
+    let hasVisibleRows = false;
+    
+    rows.forEach(row => {
+        if (filterValue === 'all' || row.dataset.type === filterValue) {
+            row.style.display = '';
+            hasVisibleRows = true;
+        } else {
+            row.style.display = 'none';
+        }
+    });
+    
+    // Get the tbody element
+    const tbody = document.querySelector('tbody');
+    const noResultsRow = document.getElementById('noActivitiesRow');
+    
+    // If no activities are visible, show the message
+    if (!hasVisibleRows) {
+        if (!noResultsRow) {
+            tbody.insertAdjacentHTML('beforeend', `
+                <tr id="noActivitiesRow">
+                    <td colspan="5" class="px-6 py-4 text-center text-gray-500">
+                        No ${filterValue === 'all' ? 'activities' : filterValue.toLowerCase()} found
+                    </td>
+                </tr>
+            `);
+        } else {
+            noResultsRow.querySelector('td').textContent = `No ${filterValue === 'all' ? 'activities' : filterValue.toLowerCase()} found`;
+            noResultsRow.style.display = '';
+        }
+    } else if (noResultsRow) {
+        noResultsRow.style.display = 'none';
+    }
+}
+
+function editActivity(activityId) {
+    fetch(`/api/activities/${activityId}/`, {
+        credentials: 'same-origin'
+    })
+    .then(handleResponse)
+    .then(result => {
+        if (result.status === 'success' && result.data) {
+            document.getElementById('edit_activity_id').value = result.data.activity_id;
+            document.getElementById('edit_activity_type').value = result.data.activity_type;
+            document.getElementById('edit_activity_name').value = result.data.activity_name;
+            document.getElementById('edit_total_items').value = result.data.total_items;
+
+            const modal = new bootstrap.Modal(document.getElementById('editClassworkModal'));
+            modal.show();
+        } else {
+            throw new Error(result.message || 'Failed to load activity data');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Failed to load activity data. Please try again.');
+    });
+}
+
+function deleteActivity(activityId) {
+    if (confirm('Are you sure you want to delete this classwork? This action cannot be undone.')) {
+        fetch(`/api/activities/${activityId}/`, {
+            method: 'DELETE',
+            headers: {
+                'X-CSRFToken': getCSRFToken(),
+            },
+            credentials: 'same-origin'
+        })
+        .then(handleResponse)
+        .then(data => {
+            if (data.status === 'success') {
+                window.location.reload();
+            } else {
+                throw new Error(data.message || 'Failed to delete classwork');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert(error.message || 'Failed to delete classwork');
+        });
+    }
+}
+
+document.getElementById('editClassworkForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const formData = new FormData(this);
+    const activityId = formData.get('activity_id');
+    const data = {
+        activity_type: formData.get('activity_type'),
+        activity_name: formData.get('activity_name'),
+        total_items: parseInt(formData.get('total_items')),
+        subject: '{{ subject.subject_code }}'
+    };
+
+    fetch(`/api/activities/${activityId}/`, {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCSRFToken(),
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => {
+        if (!response.ok) {
+            return response.json().then(err => Promise.reject(err));
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.status === 'success') {
+            const modal = bootstrap.Modal.getInstance(document.getElementById('editClassworkModal'));
+            modal.hide();
+            window.location.reload();
+        } else {
+            throw new Error(data.message || 'Failed to update classwork');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert(error.message || 'An error occurred while updating the classwork');
+    });
+});
+
+// Replace the fetch calls with the new API endpoints
+function loadSubjectInfo() {
+    fetch(`/api/subjects/${subjectCode}/info/`)
+        .then(response => response.json())
+        .then(data => {
+            // Update the UI with the received data
+            updateSubjectInfo(data.subject);
+            updateActivities(data.activities);
+            updateEnrollments(data.enrollments);
+        })
+        .catch(error => console.error('Error:', error));
+}
+
+// Add function to update the UI sections
+function updateSubjectInfo(subject) {
+    // Update subject info card
+}
+
+function updateActivities(activities) {
+    // Update activities table
+}
+
+function updateEnrollments(enrollments) {
+    // Update enrollments table
+}
+
+// Initialize the page
+document.addEventListener('DOMContentLoaded', loadSubjectInfo);
+
+function openEnrollmentModal() {
+    // Reset select all checkbox
+    document.getElementById('selectAll').checked = false;
+    
+    loadStudents();
+    const modal = new bootstrap.Modal(document.getElementById('enrollmentModal'));
+    modal.show();
+}
+
+function loadStudents() {
+    const tbody = document.getElementById('studentsList');
+    tbody.innerHTML = '<tr><td colspan="7" class="px-6 py-4 text-center text-gray-500">Loading students...</td></tr>';
+    
+    fetch(`/api/subjects/{{ subject.subject_code }}/available-students/`)
+        .then(response => response.json())
+        .then(data => {
+            tbody.innerHTML = '';
+            
+            if (data.status === 'success') {
+                const students = data.data || [];
+                if (students.length > 0) {
+                    students.forEach(student => {
+                        const statusBadge = student.status === 'I' 
+                            ? '<span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">Irregular</span>'
+                            : '<span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">Regular</span>';
+                            
+                        const row = `
+                            <tr class="student-row hover:bg-gray-50 cursor-pointer">
+                                <td class="px-6 py-4">
+                                    <input type="checkbox" class="student-checkbox rounded border-gray-300" 
+                                           value="${student.student_id}">
+                                </td>
+                                <td class="px-6 py-4 text-left">${student.last_name}, ${student.first_name}</td>
+                                <td class="px-6 py-4 text-center">${student.student_id}</td>
+                                <td class="px-6 py-4 text-center">${student.course}</td>
+                                <td class="px-6 py-4 text-center">Year ${student.year_level}</td>
+                                <td class="px-6 py-4 text-center">Section ${student.section}</td>
+                                <td class="px-6 py-4 text-center">${statusBadge}</td>
+                            </tr>
+                        `;
+                        tbody.innerHTML += row;
+                    });
+
+                    // Add click handlers to rows after adding them
+                    document.querySelectorAll('.student-row').forEach(row => {
+                        row.addEventListener('click', (e) => {
+                            if (!e.target.classList.contains('student-checkbox')) {
+                                const checkbox = row.querySelector('.student-checkbox');
+                                checkbox.checked = !checkbox.checked;
+                                updateSelectAllState();
+                            }
+                        });
+                    });
+                } else {
+                    tbody.innerHTML = `
+                        <tr><td colspan="7" class="px-6 py-4 text-center text-gray-500">No available students found</td></tr>
+                    `;
+                }
+                updateSelectAllState();
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            tbody.innerHTML = `
+                <tr><td colspan="7" class="px-6 py-4 text-center text-red-500">Failed to load students</td></tr>
+            `;
+        });
+}
+
+function updateSelectAllState() {
+    const selectAllCheckbox = document.getElementById('selectAll');
+    const visibleCheckboxes = document.querySelectorAll('.student-row:not([style*="display: none"]) .student-checkbox');
+    const checkedVisibleCheckboxes = document.querySelectorAll('.student-row:not([style*="display: none"]) .student-checkbox:checked');
+    
+    selectAllCheckbox.checked = visibleCheckboxes.length > 0 && visibleCheckboxes.length === checkedVisibleCheckboxes.length;
+    selectAllCheckbox.indeterminate = checkedVisibleCheckboxes.length > 0 && checkedVisibleCheckboxes.length < visibleCheckboxes.length;
+}
+
+// Update select all handler
+document.getElementById('selectAll').addEventListener('change', function() {
+    const isChecked = this.checked;
+    document.querySelectorAll('.student-row:not([style*="display: none"]) .student-checkbox').forEach(checkbox => {
+        checkbox.checked = isChecked;
+    });
+});
+
+document.addEventListener('click', function(e) {
+    if (e.target.classList.contains('student-checkbox')) {
+        updateSelectAllState();
+    }
+});
+
+function reloadEnrolledStudents() {
+    const subjectCode = '{{ subject.subject_code }}';
+    
+    fetch(`/api/enrollments/?subject=${subjectCode}`, {
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCSRFToken(),
+        },
+        credentials: 'same-origin'
+    })
+    .then(response => response.json())
+    .then(enrollments => {
+        const tbody = document.getElementById('enrolledStudentsTable');
+        tbody.innerHTML = '';
+        
+        if (enrollments && enrollments.length > 0) {
+            enrollments.forEach(enrollment => {
+                const student = enrollment.student;
+                const row = `
+                    <tr class="hover:bg-gray-50 transition-colors">
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <span class="text-sm font-medium text-gray-900">${student.student_id}</span>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="flex items-center">
+                                <div class="h-8 w-8 rounded-full bg-[#006837] flex items-center justify-center text-white font-medium text-sm">
+                                    ${student.first_name.charAt(0)}${student.last_name.charAt(0)}
+                                </div>
+                                <div class="ml-3">
+                                    <div class="text-sm font-medium text-gray-900">${student.last_name}, ${student.first_name}</div>
+                                    <div class="text-sm text-gray-500">${student.middle_name || ''}</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                ${student.course.course_abv}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            Year ${student.year_level} - ${student.section}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <button onclick="removeStudent('${student.student_id}')" 
+                                    class="text-red-600 hover:text-red-900 transition-colors">
+                                <i class="fas fa-user-minus"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `;
+                tbody.innerHTML += row;
+            });
+        } else {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="5" class="px-6 py-4 text-center text-gray-500">No students enrolled</td>
+                </tr>
+            `;
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        const tbody = document.getElementById('enrolledStudentsTable');
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="5" class="px-6 py-4 text-center text-red-500">
+                    Failed to load enrolled students. Please try again.
+                </td>
+            </tr>
+        `;
+    });
+}
+
+function enrollSelectedStudents() {
+    const selectedStudents = Array.from(document.querySelectorAll('.student-checkbox:checked'))
+        .map(checkbox => checkbox.value);
+
+    if (selectedStudents.length === 0) {
+        alert('Please select at least one student to enroll');
+        return;
+    }
+
+    console.log('Selected students:', selectedStudents); // Debug log
+
+    fetch('/api/enrollments/bulk_enroll/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCSRFToken()
+        },
+        body: JSON.stringify({
+            subject_code: '{{ subject.subject_code }}',
+            student_ids: selectedStudents
+        })
+    })
+    .then(response => {
+        console.log('Response status:', response.status); // Debug log
+        return response.json().then(data => {
+            if (!response.ok) {
+                throw new Error(data.message || 'Failed to enroll students');
+            }
+            return data;
+        });
+    })
+    .then(data => {
+        console.log('Enrollment response:', data); // Debug log
+        if (data.status === 'success') {
+            // Close the modal
+            bootstrap.Modal.getInstance(document.getElementById('enrollmentModal')).hide();
+            
+            // Show success message
+            alert(data.message);
+            
+            // Reload the enrolled students list
+            reloadEnrolledStudents();
+            
+            // Switch to students tab
+            showStudentsTab();
+        } else {
+            throw new Error(data.message || 'Failed to enroll students');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert(error.message || 'Failed to enroll students. Please try again.');
+    });
+}
+
+function showStudentsTab() {
+    setActiveButton(studentsBtn, classworkBtn);
+    studentsSection.classList.remove('hidden');
+    classworkSection.classList.add('hidden');
+}
+
+function reloadEnrolledStudents() {
+    const subjectCode = '{{ subject.subject_code }}';
+    
+    fetch(`/api/enrollments/?subject=${subjectCode}`, {
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCSRFToken(),
+        },
+        credentials: 'same-origin'
+    })
+    .then(response => response.json())
+    .then(enrollments => {
+        const tbody = document.getElementById('enrolledStudentsTable');
+        tbody.innerHTML = '';
+        
+        if (enrollments && enrollments.length > 0) {
+            enrollments.forEach(enrollment => {
+                const student = enrollment.student;
+                const row = `
+                    <tr class="hover:bg-gray-50 transition-colors">
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <span class="text-sm font-medium text-gray-900">${student.student_id}</span>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="flex items-center">
+                                <div class="h-8 w-8 rounded-full bg-[#006837] flex items-center justify-center text-white font-medium text-sm">
+                                    ${student.first_name.charAt(0)}${student.last_name.charAt(0)}
+                                </div>
+                                <div class="ml-3">
+                                    <div class="text-sm font-medium text-gray-900">${student.last_name}, ${student.first_name}</div>
+                                    <div class="text-sm text-gray-500">${student.middle_name || ''}</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                ${student.course.course_abv}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            Year ${student.year_level} - ${student.section}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <button onclick="removeStudent('${student.student_id}')" 
+                                    class="text-red-600 hover:text-red-900 transition-colors">
+                                <i class="fas fa-user-minus"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `;
+                tbody.innerHTML += row;
+            });
+        } else {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="5" class="px-6 py-4 text-center text-gray-500">No students enrolled</td>
+                </tr>
+            `;
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showToast('Failed to reload enrolled students', 'error');
+    });
+}
+
+function removeStudent(studentId) {
+    if (!confirm('Are you sure you want to remove this student from the subject?\n\nThis action cannot be undone.')) {
+        return;
+    }
+
+    fetch('/api/enrollments/remove_student/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCSRFToken(),
+        },
+        body: JSON.stringify({
+            subject_code: '{{ subject.subject_code }}',
+            student_id: studentId
+        }),
+        credentials: 'same-origin'
+    })
+    .then(handleResponse)
+    .then(result => {
+        if (result.status === 'success') {
+            // Reload only the enrolled students table
+            reloadEnrolledStudents();
+            showStudentsTab();
+        } else {
+            throw new Error(result.message || 'Failed to remove student');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert(error.message || 'Failed to remove student');
+    });
+}
+
+// Filter functionality
+document.getElementById('studentSearch').addEventListener('input', filterStudents);
+document.getElementById('courseFilter').addEventListener('change', filterStudents);
+document.getElementById('yearFilter').addEventListener('change', filterStudents);
+document.getElementById('sectionFilter').addEventListener('change', filterStudents);
+    
+function filterStudents() {
+    const searchValue = document.getElementById('studentSearch').value.toLowerCase();
+    const courseValue = document.getElementById('courseFilter').value;
+    const yearValue = document.getElementById('yearFilter').value;
+    const sectionValue = document.getElementById('sectionFilter').value;
+        
+    const rows = document.querySelectorAll('.student-row');
+        
+    rows.forEach(row => {
+        const studentId = row.querySelector('td:nth-child(2)').textContent.toLowerCase();
+        const studentName = row.querySelector('td:nth-child(3)').textContent.toLowerCase();
+        const course = row.querySelector('td:nth-child(4)').textContent;
+        const year = row.querySelector('td:nth-child(5)').textContent;
+        const section = row.querySelector('td:nth-child(6)').textContent;
+            
+        const matchesSearch = studentId.includes(searchValue) || studentName.includes(searchValue);
+        const matchesCourse = !courseValue || course === courseValue;
+        const matchesYear = !yearValue || year === yearValue;
+        const matchesSection = !sectionValue || section === sectionValue;
+            
+        row.style.display = matchesSearch && matchesCourse && matchesYear && matchesSection ? '' : 'none';
+    });
+    
+    updateSelectAllState();
+}
+
+// Select All functionality
+document.getElementById('selectAll').addEventListener('change', function() {
+    const checkboxes = document.querySelectorAll('.student-row:not([style*="display: none"]) .student-checkbox');
+    checkboxes.forEach(checkbox => {
+        checkbox.checked = this.checked;
+    });
+});
+
+document.addEventListener('click', function(e) {
+    if (e.target.classList.contains('student-checkbox')) {
+        updateSelectAllState();
+    }
+});
+
+function updateSelectAllState() {
+    const selectAllCheckbox = document.getElementById('selectAll');
+    const visibleCheckboxes = document.querySelectorAll('.student-row:not([style*="display: none"]) .student-checkbox');
+    const checkedVisibleCheckboxes = document.querySelectorAll('.student-row:not([style*="display: none"]) .student-checkbox:checked');
+    
+    if (visibleCheckboxes.length === 0) {
+        selectAllCheckbox.checked = false;
+        selectAllCheckbox.indeterminate = false;
+    } else if (checkedVisibleCheckboxes.length === 0) {
+        selectAllCheckbox.checked = false;
+        selectAllCheckbox.indeterminate = false;
+    } else if (checkedVisibleCheckboxes.length === visibleCheckboxes.length) {
+        selectAllCheckbox.checked = true;
+        selectAllCheckbox.indeterminate = false;
+    } else {
+        selectAllCheckbox.checked = false;
+        selectAllCheckbox.indeterminate = true;
+    }
+}
+
+function loadSections() {
+    const courseId = document.getElementById('course').value;
+    const yearLevel = document.getElementById('year_level').value;
+    
+    if (!courseId || !yearLevel) return;
+    
+    fetch(`/api/sections/?course=${courseId}&year=${yearLevel}`)
+        .then(response => response.json())
+        .then(data => {
+            const sectionSelect = document.getElementById('section');
+            sectionSelect.innerHTML = '<option value="">Select Section</option>';
+            
+            if (data.status === 'success' && data.data.length > 0) {
+                data.data.forEach(section => {
+                    sectionSelect.innerHTML += `
+                        <option value="${section.name}">${section.name}</option>
+                    `;
+                });
+            }
+        })
+        .catch(error => {
+            console.error('Error loading sections:', error);
+            showToast('Failed to load sections', 'error');
+        });
+}
+
+// Add event listeners to course and year level fields
+document.getElementById('course').addEventListener('change', loadSections);
+document.getElementById('year_level').addEventListener('change', loadSections);
+</script>
+
+<style>
+/* Modal and Form Styles */
+.modal input,
+.modal select {
+    @apply border border-gray-300;
+    border-width: 1px !important;
+}
+
+.modal input:focus,
+.modal select:focus {
+    @apply ring-2 ring-[#006837]/20 border-[#006837];
+}
+
+.modal-content {
+    animation: modal-slide-in 0.3s ease-out;
+}
+
+@keyframes modal-slide-in {
+    from {
+        transform: translateY(-20px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.form-field input,
+.form-field select {
+    @apply w-full px-4 py-3 rounded-xl text-gray-700 bg-white;
+    border: 1px solid #e5e7eb !important;
+}
+
+.form-field input:focus,
+.form-field select:focus {
+    @apply outline-none ring-2 ring-[#006837]/20 border-[#006837];
+}
+</style>
+{% endblock %}

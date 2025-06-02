@@ -1,0 +1,191 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load custom_filters %}  
+{% block title %}Student Subject Info - {{ student.first_name }} {{ student.last_name }}{% endblock %}
+{% block content %}
+<div class="p-6 bg-gradient-to-br from-gray-50 to-gray-100 min-h-screen">
+    <!-- Back Button -->
+    <div class="mb-6">
+        <a href="{% url 'student_info' student.student_id %}" class="text-gray-600 hover:text-gray-800 flex items-center gap-2">
+            <i class="fas fa-arrow-left"></i>
+            <span>Back to Student Info</span>
+        </a>
+    </div>
+
+    <!-- Header Info -->
+    <div class="bg-white rounded-2xl shadow-sm p-6 mb-6">
+        <div class="flex justify-between items-start">
+            <div>
+                <h2 class="text-2xl font-bold text-gray-800 mb-2">{{ subject.subject_title }}</h2>
+                <p class="text-gray-600">{{ subject.subject_code }}</p>
+                <p class="text-gray-500 mt-1">{{ subject.get_semester_display }}</p>
+            </div>
+            <div class="text-right">
+                <p class="text-gray-800 font-medium">{{ student.last_name }}, {{ student.first_name }}</p>
+                <p class="text-gray-600">{{ student.student_id }}</p>
+            </div>
+        </div>
+    </div>    <!-- Grades Tabs -->        <div class="flex justify-start">
+            <nav class="inline-flex rounded-t-xl bg-white w-fit">
+                <button onclick="switchTab('activities')" class="tab-btn active-tab px-4 py-2.5 rounded-tl-xl text-sm font-medium uppercase text-gray-500 hover:text-green-700 transition-all duration-200" data-tab="activities">
+                    Activities
+                </button>
+                <button onclick="switchTab('quiz')" class="tab-btn px-4 py-2.5 text-sm font-medium uppercase text-gray-500 hover:text-green-700 transition-all duration-200" data-tab="quiz">
+                    Quiz
+                </button>
+                <button onclick="switchTab('projects')" class="tab-btn px-4 py-2.5 text-sm font-medium uppercase text-gray-500 hover:text-green-700 transition-all duration-200" data-tab="projects">
+                    Projects
+                </button>
+                <button onclick="switchTab('exams')" class="tab-btn px-4 py-2.5 rounded-tr-xl text-sm font-medium uppercase text-gray-500 hover:text-green-700 transition-all duration-200" data-tab="exams">
+                    Exams
+                </button>
+            </nav>
+        </div>    <div id="contentContainer" class="bg-white shadow-sm overflow-hidden rounded-2xl">
+
+        <!-- Tab Content -->
+        <div class="tab-content" id="quiz">
+            <div class="overflow-x-auto">
+                <table class="w-full">
+                    <thead class="bg-green-700">
+                        <tr>
+                            <th class="px-6 py-3 text-center text-xs font-medium text-white uppercase">Activity Name</th>
+                            <th class="px-6 py-3 text-center text-xs font-medium text-white uppercase">Total Items</th>
+                            <th class="px-6 py-3 text-center text-xs font-medium text-white uppercase">Score</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-100">
+                        {% for activity in activities %}
+                            {% if activity.activity_type == 'Quiz' %}
+                            <tr class="hover:bg-green-100">
+                                <td class="ml-4 px-6 py-4 text-sm text-center text-gray-900">{{ activity.activity_name }}</td>
+                                <td class="px-6 py-4 text-sm text-center text-gray-600">{{ activity.total_items }}</td>
+                                <td class="px-6 py-4 text-center">
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-md font-medium {% if grades|get_item:activity.activity_id == 'N/A' %}bg-gray-100 text-gray-800{% else %}bg-green-200 text-green-800{% endif %}">
+                                        {{ grades|get_item:activity.activity_id }}
+                                    </span>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="3" class="px-6 py-8 text-center text-gray-500">
+                                    No quizzes assigned yet
+                                </td>
+                            </tr>
+                            {% endif %}
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Repeat for other tabs -->
+        {% for type in 'Activities,Projects,Exams'|split:',' %}
+        <div class="tab-content hidden" id="{{ type|lower }}">
+            <div class="overflow-x-auto">
+                <table class="w-full">
+                    <thead class="bg-green-700">
+                        <tr>
+                            <th class="px-6 py-3 text-center text-xs font-medium text-white uppercase">Activity Name</th>
+                            <th class="px-6 py-3 text-center text-xs font-medium text-white uppercase">Total Items</th>
+                            <th class="px-6 py-3 text-center text-xs font-medium text-white uppercase">Score</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-100">
+                        {% for activity in activities %}
+                            {% if activity.activity_type == type %}
+                            <tr class="hover:bg-green-100">
+                                <td class="px-6 py-4 text-sm text-center text-gray-900">{{ activity.activity_name }}</td>
+                                <td class="px-6 py-4 text-sm text-center text-gray-600">{{ activity.total_items }}</td>
+                                <td class="px-6 py-4 text-center">
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-md font-medium {% if grades|get_item:activity.activity_id == 'N/A' %}bg-gray-100 text-gray-800{% else %}bg-green-100 text-green-800{% endif %}">
+                                        {{ grades|get_item:activity.activity_id }}
+                                    </span>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="3" class="px-6 py-8 text-center text-gray-500">
+                                    No {{ type|lower }} assigned yet
+                                </td>
+                            </tr>
+                            {% endif %}
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<style>
+.tab-btn {
+    background-color: white;
+    border: none;
+    transition: all 0.2s;
+}
+
+.active-tab {
+    background-color: oklch(52.7% 0.154 150.069);
+    color: white !important;
+    font-weight: 600;
+    border-top-left-radius: 0.75rem;
+    border-top-right-radius: 0.75rem;
+}
+
+.tab-content {
+    display: none;
+    animation: fadeIn 0.3s ease-in-out;
+}
+
+.tab-content.active {
+    display: block;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(5px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+</style>
+
+<script>
+function switchTab(tabId) {
+    // First hide all tab contents and remove active classes
+    document.querySelectorAll('.tab-content').forEach(tab => {
+        tab.style.display = 'none';
+    });
+    
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.remove('active-tab');
+        btn.classList.add('bg-white');
+    });
+    
+    // Then show the selected tab and update its styling
+    const selectedTab = document.getElementById(tabId);
+    const selectedBtn = document.querySelector(`[data-tab="${tabId}"]`);
+    const contentContainer = document.getElementById('contentContainer');
+    
+    if (selectedTab && selectedBtn) {
+        selectedTab.style.display = 'block';
+        selectedBtn.classList.add('active-tab');
+        selectedBtn.classList.remove('bg-white');
+        
+        // Update container border radius based on active tab
+        contentContainer.className = 'bg-white shadow-sm overflow-hidden ' + 
+            (tabId === 'activities' ? 'rounded-tr-2xl rounded-bl-2xl rounded-br-2xl' : 'rounded-2xl');
+    }
+}
+
+// Initialize the tabs on page load
+document.addEventListener('DOMContentLoaded', function() {
+    // Show activities tab by default
+    switchTab('activities');
+});
+</script>
+{% endblock %}

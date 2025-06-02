@@ -1,0 +1,222 @@
+{% extends 'base.html' %}
+{% load static %}
+{}
+{% block content %}
+<div class="p-6 min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+    <!-- Welcome Header -->
+    <div class="mb-8">
+        <h1 class="text-3xl font-bold text-[#006837]">Dashboard</h1>
+    </div> 
+
+    <!-- Primary Stats Grid -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <!-- Total Students -->
+        <div class="bg-white rounded-2xl p-6 shadow-sm hover:shadow-md transition-all duration-300">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm text-gray-500 mb-1">Total Students</p>
+                    <h3 class="text-3xl font-bold text-gray-800">{{ total_students }}</h3>
+                </div>
+                <div class="w-12 h-12 rounded-xl bg-blue-50 flex items-center justify-center text-blue-500">
+                    <i class="fas fa-user-graduate text-2xl"></i>
+                </div>
+            </div>
+            <div class="mt-4 flex items-center text-sm">
+                <span class="text-green-500 mr-2">
+                    <i class="fas fa-arrow-up"></i> {{ new_students }}
+                </span>
+                <span class="text-gray-500">New this month</span>
+            </div>
+        </div>
+
+        <!-- Total Courses -->
+        <div class="bg-white rounded-2xl p-6 shadow-sm hover:shadow-md transition-all duration-300">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm text-gray-500 mb-1">Total Courses</p>
+                    <h3 class="text-3xl font-bold text-gray-800">{{ total_courses }}</h3>
+                </div>
+                <div class="w-12 h-12 rounded-xl bg-[#006837]/10 flex items-center justify-center text-[#006837]">
+                    <i class="fas fa-book text-2xl"></i>
+                </div>
+            </div>
+            <div class="mt-4 flex items-center text-sm">
+                <span class="text-gray-500">Active Programs</span>
+            </div>
+        </div>
+
+        <!-- Total Subjects -->
+        <div class="bg-white rounded-2xl p-6 shadow-sm hover:shadow-md transition-all duration-300">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm text-gray-500 mb-1">Total Subjects</p>
+                    <h3 class="text-3xl font-bold text-gray-800">{{ total_subjects }}</h3>
+                </div>
+                <div class="w-12 h-12 rounded-xl bg-purple-50 flex items-center justify-center text-purple-500">
+                    <i class="fas fa-book-open text-2xl"></i>
+                </div>
+            </div>
+            <div class="mt-4 flex justify-between items-center text-sm">
+                <span class="text-gray-500">Active Subjects</span>
+                <span class="text-orange-500">{{ archived_subjects }} Archived</span>
+            </div>
+        </div>
+
+        <!-- Activities -->
+        <div class="bg-white rounded-2xl p-6 shadow-sm hover:shadow-md transition-all duration-300">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm text-gray-500 mb-1">Pending Activities</p>
+                    <h3 class="text-3xl font-bold text-gray-800">{{ pending_activities }}</h3>
+                </div>
+                <div class="w-12 h-12 rounded-xl bg-yellow-50 flex items-center justify-center text-yellow-500">
+                    <i class="fas fa-tasks text-2xl"></i>
+                </div>
+            </div>
+            <div class="mt-4 flex items-center text-sm">
+                <span class="text-orange-500 mr-2">
+                    <i class="fas fa-clock"></i>
+                </span>
+                <span class="text-gray-500">Need Attention</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Secondary Stats Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+        <!-- Course Distribution -->
+        <div class="bg-white rounded-2xl p-6 shadow-sm">
+            <h3 class="text-lg font-semibold text-gray-800 mb-4">Students per Course</h3>
+            <div class="space-y-4">
+                {% for course in course_stats %}
+                <div class="flex items-center justify-between gap-8">
+                    <div class="flex items-center gap-3">
+                        <div class="w-8 h-8 rounded-lg bg-[#006837]/10 flex items-center justify-center text-[#006837]">
+                            <i class="fas fa-graduation-cap"></i>
+                        </div>
+                        <div>
+                            <p class="font-medium text-gray-800">{{ course.course_abv }}</p>
+                            <p class="text-xs text-gray-500">{{ course.course_name }}</p>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <p class="font-bold text-3xl text-gray-800">{{ course.student_count }}</p>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Year Level Distribution -->
+        <div class="bg-white rounded-2xl p-6 shadow-sm">
+            <h3 class="text-lg font-semibold text-gray-800 mb-4">Year Level Distribution</h3>
+            <div class="space-y-4">
+                {% for year in year_stats %}
+                <div>
+                    <div class="flex justify-between text-sm mb-1">
+                        <span class="text-gray-600">Year {{ year.year_level }}</span>
+                        <span class="font-medium text-gray-800">{{ year.student_count }}</span>
+                    </div>
+                    <div class="w-full bg-gray-100 rounded-full h-2">
+                        <div class="bg-[#006837] h-2 rounded-full" style="width: {{ year.percentage }}%"></div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Activity Types Distribution -->
+        <div class="bg-white rounded-2xl p-6 shadow-sm">
+            <h3 class="text-lg font-semibold text-gray-800 mb-4">Activity Distribution</h3>
+            <div class="space-y-4">
+                {% for type in activity_stats %}
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <div class="w-8 h-8 rounded-lg 
+                            {% if type.type == 'Quiz' %}bg-blue-50 text-blue-500
+                            {% elif type.type == 'Exam' %}bg-red-50 text-red-500
+                            {% elif type.type == 'Project' %}bg-purple-50 text-purple-500
+                            {% else %}bg-green-50 text-green-500{% endif %}
+                            flex items-center justify-center">
+                            <i class="fas fa-clipboard-check"></i>
+                        </div>
+                        <span class="text-gray-800">{{ type.type }}</span>
+                    </div>
+                    <div class="text-right">
+                        <p class="font-bold text-gray-800">{{ type.count }}</p>
+                        <div class="flex items-center text-xs text-gray-500">
+                            <span class="text-orange-500 mr-1">{{ type.pending }}</span> pending
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Activities Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Recent Students -->
+        <div class="bg-white rounded-2xl p-6 shadow-sm">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-lg font-semibold text-gray-800">Recent Students</h3>
+                <a href="{% url 'students' %}" class="text-[#006837] hover:text-[#2d8653] text-sm font-medium">View All</a>
+            </div>
+            <div class="space-y-4">
+                {% for student in recent_students %}
+                <div class="flex items-center justify-between p-4 hover:bg-gray-50 rounded-xl transition-colors">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-full bg-[#006837] flex items-center justify-center text-white font-medium">
+                            {{ student.first_name|slice:":1" }}{{ student.last_name|slice:":1" }}
+                        </div>
+                        <div>
+                            <p class="text-sm font-medium text-gray-800">{{ student.last_name }}, {{ student.first_name }}</p>
+                            <p class="text-xs text-gray-500">{{ student.course.course_abv }}</p>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <span class="text-xs text-gray-500">{{ student.date_added|date:"M d, Y" }}</span>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Recent Activities -->
+        <div class="bg-white rounded-2xl p-6 shadow-sm">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-lg font-semibold text-gray-800">Recent Activities</h3>
+                <a href="{% url 'subjects' %}" class="text-[#006837] hover:text-[#2d8653] text-sm font-medium">View All</a>
+            </div>
+            <div class="space-y-4">
+                {% for activity in recent_activities %}
+                <div class="flex items-center justify-between p-4 hover:bg-gray-50 rounded-xl transition-colors">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-full 
+                            {% if activity.activity_type == 'Quiz' %}bg-blue-100 text-blue-500
+                            {% elif activity.activity_type == 'Exam' %}bg-red-100 text-red-500
+                            {% elif activity.activity_type == 'Project' %}bg-purple-100 text-purple-500
+                            {% else %}bg-green-100 text-green-500{% endif %}
+                            flex items-center justify-center">
+                            <i class="fas fa-tasks"></i>
+                        </div>
+                        <div>
+                            <p class="text-sm font-medium text-gray-800">{{ activity.activity_name }}</p>
+                            <p class="text-xs text-gray-500">{{ activity.subject.subject_code }}</p>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <p class="text-sm font-medium text-gray-800">{{ activity.total_items }} points</p>
+                        {% if activity.pending_count > 0 %}
+                        <p class="text-xs text-orange-500">{{ activity.pending_count }} pending grades</p>
+                        {% else %}
+                        <p class="text-xs text-green-500">All graded</p>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

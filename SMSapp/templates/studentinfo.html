@@ -1,0 +1,72 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Student Info - {{ student.first_name }} {{ student.last_name }}{% endblock %}
+
+{% load custom_filters %}
+{% block content %}
+<div class="p-6 bg-gradient-to-br from-gray-50 to-gray-100 min-h-screen">
+    <!-- Back Button -->
+    <div class="mb-6">
+        <a href="{% url 'students' %}" class="text-gray-600 hover:text-gray-800 flex items-center gap-2">
+            <i class="fas fa-arrow-left"></i>
+            <span>Back to Students</span>
+        </a>
+    </div>
+
+    <!-- Student Info Card -->
+    <div class="bg-white rounded-2xl shadow-sm p-6 mb-6">
+        <div class="flex items-center gap-4">
+            <div class="h-16 w-16 rounded-full bg-[#006837] flex items-center justify-center text-white text-xl font-medium">
+                {{ student.first_name|slice:":1" }}{{ student.last_name|slice:":1" }}
+            </div>
+            <div>
+                <h2 class="text-2xl font-bold text-gray-800">{{ student.last_name }}, {{ student.first_name }}</h2>
+                <p class="text-gray-600">{% if student.middle_name %}{{ student.middle_name }}{% endif %}</p>
+                <div class="mt-2 flex items-center gap-3">
+                    <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
+                        {{ student.course.course_abv }}
+                    </span>
+                    <span class="text-gray-500">Year {{ student.year_level }} - {{ student.section }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Enrolled Subjects -->
+    <div class="bg-white rounded-2xl shadow-sm overflow-hidden">
+        <table class="w-full">
+            <thead class="bg-green-700 border-b border-gray-100">
+                <tr>
+                    <th class="px-6 py-4 text-center text-xs font-bold text-white uppercase tracking-wider">Subject Code</th>
+                    <th class="px-6 py-4 text-center text-xs font-bold text-white uppercase tracking-wider">Subject Title</th>
+                    <th class="px-6 py-4 text-center text-xs font-bold text-white uppercase tracking-wider">Semester</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100">
+                {% for enrollment in enrollments %}
+                <tr class="hover:bg-green-100 transition-colors cursor-pointer" 
+                    onclick="window.location.href='{% url 'student_subject_info' student.student_id enrollment.subject.subject_code %}'">
+                    <td class="px-6 py-4 whitespace-nowrap text-center">
+                        <span class="text-sm font-medium text-gray-900">{{ enrollment.subject.subject_code }}</span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-center">
+                        <span class="text-sm text-gray-900">{{ enrollment.subject.subject_title }}</span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-center">
+                        <span class="inline-flex items-center justify-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-300 text-green-800">
+                            {{ enrollment.subject.get_semester_display }}
+                        </span>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="3" class="px-6 py-8 text-center text-gray-500">
+                        No subjects enrolled
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

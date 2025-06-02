@@ -1,0 +1,675 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}
+Students{% endblock %}
+
+{% load custom_filters %}
+{% block content %}
+{% csrf_token %}
+<div class="p-6 bg-gradient-to-br from-gray-50 to-gray-100 min-h-screen">
+    <!-- Header Section -->
+    <div class="flex justify-between items-center mb-8">
+        <div>
+            <h2 class="text-3xl font-bold text-[#006837]">Students</h2>
+            <p class="text-gray-600 mt-1">Manage student records</p>
+        </div>
+        <button type="button" 
+                class="group px-6 py-3 bg-[#006837] hover:bg-[#2d8653] text-white rounded-xl transition-all duration-200 flex items-center gap-2 shadow-md hover:shadow-xl"
+                onclick="openModal()">
+            <i class="fas fa-plus-circle text-lg"></i>
+            <span class="font-medium">Add Student</span>
+        </button>
+    </div>
+
+    <!-- Students List Card -->
+    <div class="bg-white rounded-2xl shadow-sm overflow-hidden">
+        <!-- Search and Filter Section -->
+        <div class="p-6 border-b border-gray-100">
+            <div class="flex items-center gap-4">
+                <div class="relative flex-1 max-w-md">
+                    <input type="text" 
+                           id="searchInput"
+                           placeholder="   Search students..." 
+                           class="w-full px-4 py-2 pl-10 pr-4 rounded-xl border border-gray-200 focus:ring-2 focus:ring-[#006837]/20 focus:border-[#006837]">
+                    <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                </div>
+                <select id="courseFilter" 
+                        class="px-4 py-2 rounded-xl border border-gray-200 focus:ring-2 focus:ring-[#006837]/20 focus:border-[#006837]"
+                        onchange="filterStudents()">
+                    <option value="">All Courses</option>
+                    {% for course in courses %}
+                        <option value="{{ course.course_abv }}">{{ course.course_abv }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+
+        <!-- Table Section -->
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead class="bg-green-700 border-b border-gray-100">
+                    <tr>
+                        <th class="px-6 py-4 text-center text-xs font-medium text-white uppercase tracking-wider">Name</th>
+                        <th class="px-6 py-4 text-center text-xs font-medium text-white uppercase tracking-wider">Student ID</th>
+                        <th class="px-6 py-4 text-center text-xs font-medium text-white uppercase tracking-wider">Course</th>
+                        <th class="px-6 py-4 text-center text-xs font-medium text-white uppercase tracking-wider">Year & Section</th>
+                        <th class="px-6 py-4 text-center text-xs font-medium text-white uppercase tracking-wider">Status</th>
+                        <th class="px-6 py-4 text-center text-xs font-medium text-white uppercase tracking-wider">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                    {% for student in students %}
+                    <tr data-student-id="{{ student.student_id }}" class="hover:bg-green-100 transition-colors">
+                        <td class="px-6 py-4 whitespace-nowrap cursor-pointer" onclick="window.location.href='{% url 'student_info' student.student_id %}'">
+                            <div class="flex items-center justify-start ml-4">
+                                <div class="h-8 w-8 rounded-full bg-[#006837] flex items-center justify-center text-white font-medium text-sm">
+                                    {{ student.first_name|slice:":1" }}{{ student.last_name|slice:":1" }}
+                                </div>
+                                <div class="ml-3">
+                                    <div class="text-sm font-medium text-gray-900">{{ student.last_name }}, {{ student.first_name }}</div>
+                                    <div class="text-sm text-gray-500">{% if student.middle_name %}{{ student.middle_name }}{% endif %}</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-center">
+                            <span class="font-medium text-gray-900">{{ student.student_id }}</span>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-center">
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-200 text-green-800">
+                                {{ student.course.course_abv }}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">
+                            {{ student.year_level }} - {{ student.section }}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-center">
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {% if student.status == 'R' %}bg-green-200 text-green-800{% else %}bg-yellow-200 text-yellow-800{% endif %}">
+                                {% if student.status == 'R' %}Regular{% else %}Irregular{% endif %}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm">
+                            <div class="flex items-center justify-center gap-2">
+                                <button onclick="editStudent('{{ student.student_id }}')" 
+                                        class="p-2 text-[#006837] hover:bg-green-50 rounded-lg transition-colors">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button onclick="deleteStudent('{{ student.student_id }}')" 
+                                        class="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="px-6 py-4 text-center text-gray-500">
+                            No students found.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Add Student Modal -->
+    <div class="modal fade" id="addStudentModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered" style="max-width: 600px; width: 95%;">
+            <div class="modal-content bg-white rounded-2xl shadow-2xl border-0">
+                <div class="p-6 border-b border-gray-100">
+                    <div class="flex justify-between items-center">
+                        <h3 class="text-2xl font-bold text-gray-800">Add New Student</h3>
+                        <button type="button" class="text-gray-400 hover:text-gray-600 transition-colors" data-bs-dismiss="modal">
+                            <i class="fas fa-times text-lg"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="p-6">
+                    <form id="studentForm" method="POST" onsubmit="return submitForm(this, 'addStudentModal')">
+                        {% csrf_token %}
+                        <div class="space-y-6">
+                            <!-- Student ID -->
+                            <div class="form-field">
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Student ID</label>
+                                <input type="text" 
+                                       class="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-[#006837]/20 focus:border-[#006837] transition-all" 
+                                       id="student_id" 
+                                       name="student_id" 
+                                       required>
+                            </div>
+
+                            <!-- Name Fields -->
+                            <div>
+                                <h4 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">Student Information</h4>
+                                <div class="grid grid-cols-3 gap-4">
+                                    <div class="form-field">
+                                        <label class="block text-sm font-medium text-gray-700 mb-2">First Name</label>
+                                        <input type="text" 
+                                               class="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-[#006837]/20 focus:border-[#006837] transition-all" 
+                                               id="first_name" 
+                                               name="first_name" 
+                                               required>
+                                    </div>
+                                    <div class="form-field">
+                                        <label class="block text-sm font-medium text-gray-700 mb-2">Middle Name</label>
+                                        <input type="text" 
+                                               class="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-[#006837]/20 focus:border-[#006837] transition-all" 
+                                               id="middle_name" 
+                                               name="middle_name">
+                                    </div>
+                                    <div class="form-field">
+                                        <label class="block text-sm font-medium text-gray-700 mb-2">Last Name</label>
+                                        <input type="text" 
+                                               class="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-[#006837]/20 focus:border-[#006837] transition-all" 
+                                               id="last_name" 
+                                               name="last_name" 
+                                               required>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Course Details -->
+                            <div>
+                                <h4 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">Course Details</h4>
+                                <div class="grid grid-cols-3 gap-4">
+                                    <div class="form-field">
+                                        <label class="block text-sm font-medium text-gray-700 mb-2">Course</label>
+                                        <select class="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-[#006837]/20 focus:border-[#006837] transition-all" 
+                                                id="course" 
+                                                name="course" 
+                                                onchange="loadSections()"
+                                                required>
+                                            <option value="" disabled selected>Select Course</option>
+                                            {% for course in courses %}
+                                                <option value="{{ course.course_abv }}">{{ course.course_abv }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                    <div class="form-field">
+                                        <label class="block text-sm font-medium text-gray-700 mb-2">Year Level</label>
+                                        <select class="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-[#006837]/20 focus:border-[#006837] transition-all" 
+                                                id="year_level" 
+                                                name="year_level" 
+                                                onchange="loadSections()"
+                                                required>
+                                            <option value="" disabled selected>Select Year Level</option>
+                                            <option value="1">1st Year</option>
+                                            <option value="2">2nd Year</option>
+                                            <option value="3">3rd Year</option>
+                                            <option value="4">4th Year</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-field">
+                                        <label class="block text-sm font-medium text-gray-700 mb-2">Section</label>
+                                        <select class="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-[#006837]/20 focus:border-[#006837] transition-all" 
+                                                id="section" 
+                                                name="section" 
+                                                required>
+                                            <option value="" disabled selected>Select Section</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Student Status -->
+                            <div class="form-field">
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Student Status</label>
+                                <select class="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-[#006837]/20 focus:border-[#006837] transition-all" 
+                                        id="status" 
+                                        name="status" 
+                                        required>
+                                    <option value="R">Regular</option>
+                                    <option value="I">Irregular</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="flex justify-end items-center gap-3 mt-8 pt-6 border-t border-gray-100">
+                            <button type="button" 
+                                    class="px-6 py-2.5 rounded-xl border border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors" 
+                                    data-bs-dismiss="modal">Cancel</button>
+                            <button type="submit" 
+                                    class="px-6 py-2.5 rounded-xl bg-[#006837] text-white hover:bg-[#2d8653] transition-colors">
+                                Save Student
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Student Modal -->
+    <div class="modal fade" id="editStudentModal" data-bs-backdrop="static" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered" style="max-width: 600px; width: 95%;">
+            <div class="modal-content bg-white rounded-2xl shadow-2xl border-0">
+                <div class="p-6 border-b border-gray-100">
+                    <div class="flex justify-between items-center">
+                        <h3 class="text-2xl font-bold text-gray-800">Edit Student</h3>
+                        <button type="button" class="text-gray-400 hover:text-gray-600 transition-colors" data-bs-dismiss="modal">
+                            <i class="fas fa-times text-lg"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="p-6">
+                    <form id="editStudentForm" method="POST">
+                        {% csrf_token %}
+                        <div class="space-y-6">
+                            <!-- Student ID -->
+                            <div class="form-field">
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Student ID</label>
+                                <input type="text" 
+                                       class="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-[#006837]/20 focus:border-[#006837] transition-all" 
+                                       id="edit_student_id" 
+                                       name="student_id" 
+                                       required>
+                            </div>
+
+                            <!-- Name Fields -->
+                            <div>
+                                <h4 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">Student Information</h4>
+                                <div class="grid grid-cols-3 gap-4">
+                                    <div class="form-field">
+                                        <label class="block text-sm font-medium text-gray-700 mb-2">First Name</label>
+                                        <input type="text" 
+                                               class="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-[#006837]/20 focus:border-[#006837] transition-all" 
+                                               id="edit_first_name" 
+                                               name="first_name" 
+                                               required>
+                                    </div>
+                                    <div class="form-field">
+                                        <label class="block text-sm font-medium text-gray-700 mb-2">Middle Name</label>
+                                        <input type="text" 
+                                               class="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-[#006837]/20 focus:border-[#006837] transition-all" 
+                                               id="edit_middle_name" 
+                                               name="middle_name">
+                                    </div>
+                                    <div class="form-field">
+                                        <label class="block text-sm font-medium text-gray-700 mb-2">Last Name</label>
+                                        <input type="text" 
+                                               class="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-[#006837]/20 focus:border-[#006837] transition-all" 
+                                               id="edit_last_name" 
+                                               name="last_name" 
+                                               required>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Course Details -->
+                            <div>
+                                <h4 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">Course Details</h4>
+                                <div class="grid grid-cols-3 gap-4">
+                                    <div class="form-field">
+                                        <label class="block text-sm font-medium text-gray-700 mb-2">Course</label>
+                                        <select class="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-[#006837]/20 focus:border-[#006837] transition-all" 
+                                                id="edit_course" 
+                                                name="course" 
+                                                required>
+                                            <option value="" disabled selected>Select Course</option>
+                                            {% for course in courses %}
+                                                <option value="{{ course.course_abv }}">{{ course.course_abv }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                    <div class="form-field">
+                                        <label class="block text-sm font-medium text-gray-700 mb-2">Year Level</label>
+                                        <select class="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-[#006837]/20 focus:border-[#006837] transition-all" 
+                                               id="edit_year_level" 
+                                               name="year_level" 
+                                               onchange="loadSections(true)"
+                                               required>
+                                            <option value="1">1st Year</option>
+                                            <option value="2">2nd Year</option>
+                                            <option value="3">3rd Year</option>
+                                            <option value="4">4th Year</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-field">
+                                        <label class="block text-sm font-medium text-gray-700 mb-2">Section</label>
+                                        <select class="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-[#006837]/20 focus:border-[#006837] transition-all" 
+                                               id="edit_section" 
+                                               name="section" 
+                                               required>
+                                            <option value="" disabled selected>Select Section</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Student Status -->
+                            <div class="form-field">
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Student Status</label>
+                                <select class="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-[#006837]/20 focus:border-[#006837] transition-all" 
+                                        id="edit_status" 
+                                        name="status" 
+                                        required>
+                                    <option value="R">Regular</option>
+                                    <option value="I">Irregular</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="flex justify-end items-center gap-3 mt-8 pt-6 border-t border-gray-100">
+                            <button type="button" 
+                                    class="px-6 py-2.5 rounded-xl border border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors" 
+                                    data-bs-dismiss="modal">Cancel</button>
+                            <button type="submit" 
+                                    class="px-6 py-2.5 rounded-xl bg-[#006837] text-white hover:bg-[#2d8653] transition-colors">
+                                Update Student
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function openModal() {
+    document.getElementById('studentForm').reset();
+    var myModal = new bootstrap.Modal(document.getElementById('addStudentModal'));
+    myModal.show();
+}
+
+function submitForm(form, modalId) {
+    event.preventDefault();
+    const formData = new FormData(form);
+    const data = {};
+    
+    formData.forEach((value, key) => {
+        if (key !== 'csrfmiddlewaretoken') {
+            data[key] = value;
+        }
+    });
+    
+    console.log('Submitting data:', data);
+    
+    fetch('/api/students/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': formData.get('csrfmiddlewaretoken'),
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('There is already a student with this ID');
+        }
+        return response.json();
+    })
+    .then(result => {
+        console.log('Server response:', result);
+        if (result.status === 'success') {
+            bootstrap.Modal.getInstance(document.getElementById(modalId)).hide();
+            window.location.reload();
+        } else {
+            throw new Error(result.message || 'Failed to create student');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert(error.message || 'An error occurred while saving the student');
+    });
+
+    return false;
+}
+
+document.getElementById('editStudentForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const formData = new FormData(this);
+    const data = {};
+    const oldId = document.getElementById('edit_student_id').getAttribute('data-original-id');
+    
+    formData.forEach((value, key) => {
+        if (key !== 'csrfmiddlewaretoken') {
+            data[key] = value;
+        }
+    });
+
+    fetch(`/api/students/${oldId}/`, {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': formData.get('csrfmiddlewaretoken'),
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(result => {
+        if (result.status === 'success') {
+            bootstrap.Modal.getInstance(document.getElementById('editStudentModal')).hide();
+            window.location.reload();
+        } else if (result.status === 'error') {
+            alert(result.message || 'Failed to update student');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert(error.message || 'An error occurred while updating the student');
+    });
+});
+
+function editStudent(studentId) {
+    fetch(`/api/students/${studentId}/`)
+    .then(response => response.json())
+    .then(result => {
+        if (result.status === 'success') {
+            const data = result.data;
+            const form = document.getElementById('editStudentForm');
+            const studentIdInput = form.querySelector('#edit_student_id');
+            studentIdInput.value = data.student_id;
+            studentIdInput.setAttribute('data-original-id', data.student_id);
+            form.querySelector('#edit_last_name').value = data.last_name;
+            form.querySelector('#edit_first_name').value = data.first_name;
+            form.querySelector('#edit_middle_name').value = data.middle_name || '';
+            form.querySelector('#edit_course').value = data.course;
+            form.querySelector('#edit_year_level').value = data.year_level;
+            form.querySelector('#edit_section').value = data.section;
+            form.querySelector('#edit_status').value = data.status;
+
+            // Store current section for after loading options
+            window.currentSection = data.section;
+
+            // Call loadSections with isEdit=true
+            loadSections(true);
+            
+            var editModal = new bootstrap.Modal(document.getElementById('editStudentModal'));
+            editModal.show();
+        } else {
+            throw new Error(result.message || 'Failed to load student data');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Failed to load student data');
+    });
+}
+
+function handleApiResponse(response, successMessage) {
+    if (response.status === 'success') {
+        showToast(successMessage || 'Operation completed successfully', 'success');
+        setTimeout(() => location.reload(), 1500);
+    } else {
+        showToast(response.message || 'An error occurred', 'error');
+    }
+}
+
+function deleteStudent(studentId) {
+    if (confirm('Are you sure you want to delete this student?')) {
+        fetch(`/api/students/${studentId}/`, {
+            method: 'DELETE',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+            }
+        })
+        .then(response => {
+            if (!response.ok) {
+                if (response.status === 404) {
+                    throw new Error('Student not found. The page will be refreshed.');
+                }
+                throw new Error('Failed to delete student');
+            }
+            return response.json();
+        })
+        .then(data => {
+            handleApiResponse(data, 'Student deleted successfully!');
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showToast(error.message, 'error');
+            if (error.message.includes('not found')) {
+                setTimeout(() => location.reload(), 1500);
+            }
+        });
+    }
+}
+
+// New filterStudents function
+function filterStudents() {
+    const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+    const selectedCourse = document.getElementById('courseFilter').value;
+    const rows = document.querySelectorAll('tbody tr');
+
+    rows.forEach(row => {
+        const studentId = row.querySelector('td:nth-child(1)').textContent.toLowerCase();
+        const name = row.querySelector('td:nth-child(2)').textContent.toLowerCase();
+        const course = row.querySelector('td:nth-child(3)').textContent.trim();
+        const yearSection = row.querySelector('td:nth-child(4)').textContent.toLowerCase();
+
+        const matchesSearch = studentId.includes(searchTerm) || 
+                            name.includes(searchTerm) || 
+                            yearSection.includes(searchTerm);
+        const matchesCourse = !selectedCourse || course === selectedCourse;
+
+        row.style.display = matchesSearch && matchesCourse ? '' : 'none';
+    });
+}
+
+// Add event listener for search input
+document.getElementById('searchInput').addEventListener('input', filterStudents);
+
+// Add debouncing to search
+function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    };
+}
+
+document.getElementById('searchInput').addEventListener('input', 
+    debounce(() => filterStudents(), 300)
+);
+
+function handleApiResponse(response, successMessage) {
+    if (response.status === 'success') {
+        showToast(successMessage || 'Operation completed successfully', 'success');
+        setTimeout(() => location.reload(), 1500);
+    } else {
+        showToast(response.message || 'An error occurred', 'error');
+    }
+}
+
+function loadSections(isEdit = false) {
+    const courseSelect = isEdit ? document.getElementById('edit_course') : document.getElementById('course');
+    const yearSelect = isEdit ? document.getElementById('edit_year_level') : document.getElementById('year_level');
+    const sectionSelect = isEdit ? document.getElementById('edit_section') : document.getElementById('section');
+    
+    const course = courseSelect.value;
+    const year = yearSelect.value;
+    
+    console.log(`Loading sections for course: ${course}, year: ${year}, isEdit: ${isEdit}`);
+    
+    if (!course || !year) {
+        sectionSelect.innerHTML = '<option value="" disabled selected>Select Section</option>';
+        sectionSelect.disabled = true;
+        return;
+    }
+
+    fetch(`/api/student-sections/?course=${course}&year_level=${year}`)
+        .then(response => response.json())
+        .then(data => {
+            console.log('Sections data:', data);
+            sectionSelect.innerHTML = '<option value="" disabled selected>Select Section</option>';
+            
+            if (data.status === 'success' && data.data) {
+                data.data.forEach(section => {
+                    sectionSelect.innerHTML += `
+                        <option value="${section.section_name}">Section ${section.section_name}</option>
+                    `;
+                });
+                sectionSelect.disabled = false;
+
+                // If editing, set the section value after loading options
+                if (isEdit && window.currentSection) {
+                    sectionSelect.value = window.currentSection;
+                    window.currentSection = null;
+                }
+            }
+        })
+        .catch(error => {
+            console.error('Error loading sections:', error);
+        });
+}
+
+
+// Update event listeners
+document.addEventListener('DOMContentLoaded', function() {
+    const editCourseSelect = document.getElementById('edit_course');
+    
+    if (editCourseSelect) {
+        editCourseSelect.addEventListener('change', () => loadSections(true));
+    }
+});
+
+// Initialize sections as disabled
+document.getElementById('section').disabled = true;
+document.getElementById('edit_section').disabled = true;
+</script>
+
+<style>
+/* Modal and Form Styles */
+.modal input,
+.modal select {
+    @apply border border-gray-300;
+    border-width: 1px !important;
+}
+
+.modal input:focus,
+.modal select:focus {
+    @apply ring-2 ring-[#006837]/20 border-[#006837];
+}
+
+.modal-content {
+    animation: modal-slide-in 0.3s ease-out;
+}
+
+@keyframes modal-slide-in {
+    from {
+        transform: translateY(-20px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.form-field input,
+.form-field select {
+    @apply w-full px-4 py-3 rounded-xl text-gray-700 bg-white;
+    border: 1px solid #e5e7eb !important;
+}
+
+.form-field input:focus,
+.form-field select:focus {
+    @apply outline-none ring-2 ring-[#006837]/20 border-[#006837];
+}
+</style>
+{% endblock %}

@@ -1,0 +1,154 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Archived Subjects{% endblock %}
+{% block content %}
+{% csrf_token %}
+<div class="p-6 min-h-screen">
+    <!-- Header -->
+    <div class="flex items-center justify-between mb-8">
+        <div>
+            <h2 class="text-3xl font-bold text-[#006837]">Archived Subjects</h2>
+            <p class="text-gray-600 mt-1">Manage your archived subjects</p>
+        </div>
+    </div>
+
+    <!-- Archived Subjects Grid -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        {% for subject in subjects %}
+        <div class="relative group bg-white rounded-2xl overflow-hidden transition-all duration-300 hover:-translate-y-1 border border-gray-100">
+            <!-- Actions Dropdown -->
+            <div class="absolute top-6 right-6 z-50">
+                <button type="button" 
+                        class="p-2 rounded-full transition-colors relative" 
+                        onclick="event.preventDefault(); toggleDropdown(this)">
+                    <i class="fas fa-ellipsis-v text-gray-600"></i>
+                </button>
+                <div class="absolute right-0 mt-1 w-48 bg-white rounded-xl shadow-xl border border-gray-100 hidden">
+                    <button onclick="restoreSubject('{{ subject.subject_code }}')" 
+                            class="w-full text-left px-4 py-3 hover:bg-green-50 text-gray-700 flex items-center gap-2">
+                        <i class="fas fa-undo text-[#006837]"></i> Restore Subject
+                    </button>
+                    <button onclick="deleteSubject('{{ subject.subject_code }}')" 
+                            class="w-full text-left px-4 py-3 hover:bg-red-50 text-red-600 flex items-center gap-2">
+                        <i class="fas fa-trash"></i> Delete Permanently
+                    </button>
+                </div>
+            </div>
+
+            <!-- Subject Info -->
+            <div class="p-6">
+                <div class="mb-4">
+                    <span class="text-xs text-gray-500">
+                        Archived on: {{ subject.archived_date|date:"M d, Y" }}
+                    </span>
+                </div>
+                <h3 class="text-xl font-bold text-gray-800">{{ subject.subject_code }}</h3>
+                <p class="text-gray-600 mt-1">{{ subject.subject_title }}</p>
+                
+                <!-- Subject Details -->
+                <div class="mt-4 space-y-3">
+                    <div class="flex items-center gap-3">
+                        <div class="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center text-gray-600">
+                            <i class="fas fa-graduation-cap"></i>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-500">Course</p>
+                            <p class="font-medium">{{ subject.course.course_abv }}</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <div class="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center text-gray-600">
+                            <i class="fas fa-users"></i>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-500">Year & Section</p>
+                            <p class="font-medium">{{ subject.year_level }} - {{ subject.section }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-span-full text-center py-12">
+            <div class="text-gray-400">
+                <i class="fas fa-archive text-5xl mb-4"></i>
+                <p class="text-lg">No archived subjects found</p>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<script>
+function handleApiResponse(response, successMessage) {
+    if (response.status === 'success') {
+        showToast(successMessage || 'Operation completed successfully', 'success');
+        setTimeout(() => {
+            if (window.location.pathname !== '/subjects/') {
+                window.location.href = '/subjects/';
+            } else {
+                location.reload();
+            }
+        }, 1500);
+    } else {
+        showToast(response.message || 'An error occurred', 'error');
+    }
+}
+
+function restoreSubject(subjectCode) {
+    if (!confirm('Are you sure you want to restore this subject?')) return;
+
+    fetch(`/api/subjects/${subjectCode}/unarchive/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+        }
+    })
+    .then(response => response.json())
+    .then(data => handleApiResponse(data, 'Subject restored successfully!'))
+    .catch(error => {
+        console.error('Error:', error);
+        showToast('Failed to restore subject', 'error');
+    });
+}
+
+function deleteSubject(subjectCode) {
+    if (!confirm('Are you sure you want to permanently delete this subject?')) return;
+
+    fetch(`/api/subjects/${subjectCode}/`, {
+        method: 'DELETE',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+        }
+    })
+    .then(response => response.json())
+    .then(data => handleApiResponse(data, 'Subject deleted successfully!'))
+    .catch(error => {
+        console.error('Error:', error);
+        showToast('Failed to delete subject', 'error');
+    });
+}
+
+function toggleDropdown(button) {
+    // Close all other dropdowns
+    document.querySelectorAll('.dropdown-menu').forEach(menu => {
+        if (menu !== button.nextElementSibling) {
+            menu.classList.add('hidden');
+        }
+    });
+
+    const menu = button.nextElementSibling;
+    menu.classList.toggle('hidden');
+
+    // Handle outside clicks
+    document.addEventListener('click', function closeMenu(e) {
+        if (!button.contains(e.target) && !menu.contains(e.target)) {
+            menu.classList.add('hidden');
+            document.removeEventListener('click', closeMenu);
+        }
+    });
+}
+</script>
+{% endblock %}

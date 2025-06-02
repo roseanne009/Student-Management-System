@@ -1,0 +1,773 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Course & Sections{% endblock %}
+{% block content %}
+{% csrf_token %}
+<div class="p-6 min-h-screen">
+    <!-- Header Section -->
+    <div class="flex justify-between items-center mb-8">
+        <div>
+            <h2 class="text-3xl font-bold text-[#006837]">Academic Management</h2>
+            <p class="text-gray-600 mt-1">Manage your courses and sections</p>
+        </div>
+    </div>
+
+    <!-- Tab Navigation -->
+    <div class="mb-6 border-b border-gray-200">
+        <div class="flex gap-4">
+            <button id="coursesTab" 
+                    onclick="switchTab('courses')"
+                    class="px-6 py-3 font-medium text-gray-600 border-b-2 border-transparent hover:text-[#006837] tab-active">
+                Courses
+            </button>
+            <button id="sectionsTab" 
+                    onclick="switchTab('sections')"
+                    class="px-6 py-3 font-medium text-gray-600 border-b-2 border-transparent hover:text-[#006837]">
+                Sections
+            </button>
+        </div>
+    </div>
+
+    <!-- Courses Content -->
+    <div id="coursesContent" class="tab-content">
+        <div class="flex justify-between items-center mb-6">
+            <h3 class="text-xl font-semibold text-gray-800">Course List</h3>
+            <button type="button" 
+                    class="group px-6 py-3 bg-[#006837] hover:bg-[#2d8653] text-white rounded-xl transition-all duration-200 flex items-center gap-2 shadow-md hover:shadow-xl"
+                    onclick="openModal('addCourseModal')">
+                <i class="fas fa-plus-circle text-lg"></i>
+                <span class="font-medium">Add Course</span>
+            </button>
+        </div>
+        
+        <!-- Existing courses grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {% for course in courses %}
+            <div class="relative group bg-white rounded-2xl overflow-hidden transition-all duration-300 hover:-translate-y-1 border border-gray-100 hover:shadow-[0_20px_35px_-10px_rgba(0,104,55,0.1)]">
+                <!-- 3-dots Dropdown Button -->
+                <div class="absolute top-6 right-6 z-50">
+                    <button type="button" 
+                            class="p-2 rounded-full transition-colors relative" 
+                            onclick="event.preventDefault(); toggleDropdown(this)">
+                        <i class="fas fa-ellipsis-v text-gray-600"></i>
+                    </button>
+                    <div class="absolute right-0 mt-1 w-48 bg-white rounded-xl shadow-xl border border-gray-100 hidden">
+                        <button onclick="editCourse('{{ course.course_abv }}')" 
+                                class="w-full text-left px-4 py-3 hover:bg-green-50 text-gray-700 flex items-center gap-2 rounded-t-xl">
+                            <i class="fas fa-edit text-[#006837]"></i> Edit
+                        </button>
+                        <button onclick="deleteCourse('{{ course.course_abv }}')" 
+                                class="w-full text-left px-4 py-3 hover:bg-red-50 text-red-600 flex items-center gap-2 rounded-b-xl">
+                            <i class="fas fa-trash"></i> Delete
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="p-6 relative">
+                    <!-- Decorative Elements -->
+                    <div class="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-[#006837]/5 to-transparent rounded-bl-full"></div>
+                    <div class="absolute bottom-0 left-0 w-24 h-24 bg-gradient-to-tr from-[#FFB81C]/5 to-transparent rounded-tr-full"></div>
+
+                    <!-- Course Header -->
+                    <div class="mb-6 relative z-10 pr-20">
+                        <div class="flex items-center gap-4">
+                            <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-[#006837] to-[#2d8653] flex items-center justify-center text-white font-bold shadow-lg transform group-hover:scale-110 transition-all duration-300">
+                                {{ course.course_abv}}
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500">Course Code</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Course Content -->
+                    <div class="relative z-10">
+                        <div class="p-4 rounded-xl bg-gray-50 group-hover:bg-green-50/50 transition-colors">
+                            <p class="text-xs text-gray-500">Course Name</p>
+                            <p class="font-medium text-gray-700 mt-1">{{ course.course_name }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Sections Content -->
+    <div id="sectionsContent" class="tab-content hidden">
+        <div class="flex justify-between items-center mb-6">
+            <h3 class="text-xl font-semibold text-gray-800">Section List</h3>
+            <button type="button" 
+                    class="group px-6 py-3 bg-[#006837] hover:bg-[#2d8653] text-white rounded-xl transition-all duration-200 flex items-center gap-2 shadow-md hover:shadow-xl"
+                    onclick="openModal('addSectionModal')">
+                <i class="fas fa-plus-circle text-lg"></i>
+                <span class="font-medium">Add Section</span>
+            </button>
+        </div>
+
+        <!-- Filter Section -->
+        <div class="mb-6 flex gap-4">
+            <select id="courseFilter" class="px-4 py-2 rounded-xl border border-gray-200 text-sm">
+                <option value="">All Courses</option>
+                {% for course in courses %}
+                <option value="{{ course.course_abv }}">{{ course.course_name }}</option>
+                {% endfor %}
+            </select>
+            <select id="yearFilter" class="px-4 py-2 rounded-xl border border-gray-200 text-sm">
+                <option value="">All Years</option>
+                <option value="1">1st Year</option>
+                <option value="2">2nd Year</option>
+                <option value="3">3rd Year</option>
+                <option value="4">4th Year</option>
+            </select>
+        </div>
+
+        <!-- Sections Table -->
+        <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+            <table class="w-full">
+                <thead class="bg-green-700">
+                    <tr>
+                        <th class="px-6 py-3 text-center text-xs font-medium text-white uppercase">Course</th>
+                        <th class="px-6 py-3 text-center text-xs font-medium text-white uppercase">Year Level</th>
+                        <th class="px-6 py-3 text-center text-xs font-medium text-white uppercase">Section</th>
+                        <th class="px-6 py-3 text-center text-xs font-medium text-white uppercase">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200">
+                    {% for section in sections %}
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-6 py-4 text-center">{{ section.course.course_abv }}</td>
+                        <td class="px-6 py-4 text-center">Year {{ section.year_level }}</td>
+                        <td class="px-6 py-4 text-center">{{ section.section_name }}</td>
+                        <td class="px-6 py-4 text-center">
+                            <button onclick="editSection('{{ section.id }}')" class="text-blue-600 hover:text-blue-800 mr-3">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button onclick="deleteSection('{{ section.id }}')" class="text-red-600 hover:text-red-800">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="4" class="px-6 py-4 text-center text-gray-500">No sections found</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Add Course Modal -->
+    <div class="modal fade" id="addCourseModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered" style="max-width: 500px; width: 95%;">
+            <div class="modal-content bg-white rounded-2xl shadow-2xl border-0">
+                <div class="p-6 border-b border-gray-100">
+                    <div class="flex justify-between items-center">
+                        <h3 class="text-2xl font-bold text-gray-800">Add New Course</h3>
+                        <button type="button" class="text-gray-400 hover:text-gray-600 transition-colors" data-bs-dismiss="modal">
+                            <i class="fas fa-times text-lg"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="p-6">
+                    <form id="courseForm" method="POST" class="space-y-6">
+                        {% csrf_token %}
+                        <!-- Course Information -->
+                        <div>
+                            <h4 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">Course Details</h4>
+                            <div class="space-y-4">
+                                <div class="form-field">
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Course Code</label>
+                                    <input type="text" 
+                                           class="w-full px-4 py-3 rounded-xl border border-gray-300 focus:border-[#006837] focus:ring focus:ring-[#006837]/20 transition-all" 
+                                           id="course_abv" 
+                                           name="course_abv" 
+                                           placeholder="e.g., BSIT" 
+                                           required>
+                                </div>
+                                <div class="form-field">
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Course Name</label>
+                                    <input type="text" 
+                                           class="w-full px-4 py-3 rounded-xl border border-gray-300 focus:border-[#006837] focus:ring focus:ring-[#006837]/20 transition-all" 
+                                           id="course_name" 
+                                           name="course_name" 
+                                           placeholder="e.g., Bachelor of Science in Information Technology" 
+                                           required>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="flex justify-end items-center gap-3 pt-6 border-t border-gray-100">
+                            <button type="button" 
+                                    class="px-6 py-2.5 rounded-xl border border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors" 
+                                    data-bs-dismiss="modal">
+                                Cancel
+                            </button>
+                            <button type="submit" 
+                                    class="px-6 py-2.5 rounded-xl bg-[#006837] text-white hover:bg-[#2d8653] transition-colors">
+                                Save Course
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Course Modal -->
+    <div class="modal fade" id="editCourseModal" data-bs-backdrop="static" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered" style="max-width: 500px; width: 95%;">
+            <div class="modal-content bg-white rounded-2xl shadow-2xl border-0">
+                <div class="p-6 border-b border-gray-100">
+                    <div class="flex justify-between items-center">
+                        <h3 class="text-2xl font-bold text-gray-800">Edit Course</h3>
+                        <button type="button" class="text-gray-400 hover:text-gray-600 transition-colors" data-bs-dismiss="modal">
+                            <i class="fas fa-times text-lg"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="p-6">
+                    <form id="editCourseForm" method="POST" class="space-y-6">
+                        {% csrf_token %}
+                        <input type="hidden" id="original_course_abv" name="original_course_abv">
+                        <div>
+                            <h4 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">Course Details</h4>
+                            <div class="space-y-4">
+                                <div class="form-field">
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Course Code</label>
+                                    <input type="text" 
+                                           class="w-full px-4 py-3 rounded-xl border border-gray-300 focus:border-[#006837] focus:ring focus:ring-[#006837]/20 transition-all" 
+                                           id="edit_course_abv" 
+                                           name="course_abv" 
+                                           required>
+                                </div>
+                                <div class="form-field">
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Course Name</label>
+                                    <input type="text" 
+                                           class="w-full px-4 py-3 rounded-xl border border-gray-300 focus:border-[#006837] focus:ring focus:ring-[#006837]/20 transition-all" 
+                                           id="edit_course_name" 
+                                           name="course_name" 
+                                           required>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="flex justify-end items-center gap-3 pt-6 border-t border-gray-100">
+                            <button type="button" 
+                                    class="px-6 py-2.5 rounded-xl border border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors" 
+                                    data-bs-dismiss="modal">
+                                Cancel
+                            </button>
+                            <button type="submit" 
+                                    class="px-6 py-2.5 rounded-xl bg-[#006837] text-white hover:bg-[#2d8653] transition-colors">
+                                Update Course
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Section Modal -->
+    <div class="modal fade" id="addSectionModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered" style="max-width: 500px; width: 95%;">
+            <div class="modal-content bg-white rounded-2xl shadow-2xl border-0">
+                <div class="p-6 border-b border-gray-100">
+                    <div class="flex justify-between items-center">
+                        <h3 class="text-2xl font-bold text-gray-800">Add New Section</h3>
+                        <button type="button" class="text-gray-400 hover:text-gray-600" data-bs-dismiss="modal">
+                            <i class="fas fa-times text-lg"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="p-6">
+                    <form id="sectionForm" class="space-y-6">
+                        {% csrf_token %}
+                        <div class="form-field">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Course</label>
+                            <select name="course" class="w-full rounded-xl px-4 py-3 border border-gray-300 focus:border-[#006837] focus:ring focus:ring-[#006837]/20" required>
+                                <option value="">Select Course</option>
+                                {% for course in courses %}
+                                <option value="{{ course.course_abv }}">{{ course.course_name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="form-field">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Year Level</label>
+                            <select name="year_level" class="w-full rounded-xl px-4 py-3 border border-gray-300 focus:border-[#006837] focus:ring focus:ring-[#006837]/20" required>
+                                <option value="">Select Year Level</option>
+                                <option value="1">1st Year</option>
+                                <option value="2">2nd Year</option>
+                                <option value="3">3rd Year</option>
+                                <option value="4">4th Year</option>
+                            </select>
+                        </div>
+                        <div class="form-field">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Section Name</label>
+                            <input type="text" name="section_name" 
+                                   class="w-full rounded-xl px-4 py-3 border border-gray-300 focus:border-[#006837] focus:ring focus:ring-[#006837]/20" required>
+                        </div>
+                        <div class="flex justify-end gap-3 pt-4 border-t border-gray-100">
+                            <button type="button" class="px-6 py-2.5 border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50" 
+                                    data-bs-dismiss="modal">Cancel</button>
+                            <button type="submit" class="px-6 py-2.5 bg-[#006837] text-white rounded-xl hover:bg-[#2d8653]">
+                                Save Section</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Section Modal -->
+    <div class="modal fade" id="editSectionModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered" style="max-width: 500px; width: 95%;">
+            <div class="modal-content bg-white rounded-2xl shadow-2xl border-0">
+                <div class="p-6 border-b border-gray-100">
+                    <div class="flex justify-between items-center">
+                        <h3 class="text-2xl font-bold text-gray-800">Edit Section</h3>
+                        <button type="button" class="text-gray-400 hover:text-gray-600" data-bs-dismiss="modal">
+                            <i class="fas fa-times text-lg"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="p-6">
+                    <form id="editSectionForm" class="space-y-6">
+                        {% csrf_token %}
+                        <input type="hidden" id="edit_section_id" name="section_id">
+                        <div class="form-field">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Course</label>
+                            <select id="edit_course" name="course" class="form-select w-full rounded-xl" required>
+                                <option value="">Select Course</option>
+                                {% for course in courses %}
+                                <option value="{{ course.course_abv }}">{{ course.course_name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="form-field">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Year Level</label>
+                            <select id="edit_year_level" name="year_level" class="form-select w-full rounded-xl" required>
+                                <option value="">Select Year Level</option>
+                                <option value="1">1st Year</option>
+                                <option value="2">2nd Year</option>
+                                <option value="3">3rd Year</option>
+                                <option value="4">4th Year</option>
+                            </select>
+                        </div>
+                        <div class="form-field">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Section Name</label>
+                            <input type="text" id="edit_section_name" name="section_name" 
+                                   class="form-input w-full rounded-xl px-4 py-3" required>
+                        </div>
+                        <div class="flex justify-end gap-3 pt-4 border-t border-gray-100">
+                            <button type="button" class="px-6 py-2.5 border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50" 
+                                    data-bs-dismiss="modal">Cancel</button>
+                            <button type="submit" class="px-6 py-2.5 bg-[#006837] text-white rounded-xl hover:bg-[#2d8653]">
+                                Update Section</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function switchTab(tab) {
+    // Update tab buttons
+    document.querySelectorAll('.tab-active').forEach(el => el.classList.remove('tab-active', 'border-[#006837]', 'text-[#006837]'));
+    document.getElementById(`${tab}Tab`).classList.add('tab-active', 'border-[#006837]', 'text-[#006837]');
+    
+    // Update content visibility
+    document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+    document.getElementById(`${tab}Content`).classList.remove('hidden');
+    
+    // Save active tab
+    localStorage.setItem('activeTab', tab);
+}
+
+// Set initial active tab on page load
+document.addEventListener('DOMContentLoaded', function() {
+    // Check for saved tab
+    const activeTab = localStorage.getItem('activeTab') || 'courses';
+    switchTab(activeTab);
+});
+
+function openModal(modalId) {
+    document.getElementById(modalId === 'addSectionModal' ? 'sectionForm' : 'courseForm').reset();
+    new bootstrap.Modal(document.getElementById(modalId)).show();
+}
+
+// Section CRUD operations
+document.getElementById('sectionForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const formData = new FormData(this);
+    
+    fetch('/api/sections/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': formData.get('csrfmiddlewaretoken')
+        },
+        body: JSON.stringify(Object.fromEntries(formData))
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            showToast('Section created successfully', 'success');
+            bootstrap.Modal.getInstance(document.getElementById('addSectionModal')).hide();
+            localStorage.setItem('activeTab', 'sections');
+            setTimeout(() => location.reload(), 1000);
+        } else {
+            showToast(data.message || 'Failed to create section', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showToast('Failed to create section', 'error');
+    });
+});
+
+function editSection(sectionId) {
+    fetch(`/api/sections/${sectionId}/`, {
+        headers: {
+            'Accept': 'application/json',
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        console.log('Retrieved section data:', data);  // Debug log
+        if (data.status === 'success') {
+            document.getElementById('edit_section_id').value = sectionId;
+            document.getElementById('edit_course').value = data.data.course;
+            document.getElementById('edit_year_level').value = data.data.year_level;
+            document.getElementById('edit_section_name').value = data.data.section_name;
+            
+            new bootstrap.Modal(document.getElementById('editSectionModal')).show();
+        } else {
+            throw new Error(data.message || 'Failed to load section data');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showToast('Failed to load section data: ' + error.message, 'error');
+    });
+}
+
+document.getElementById('editSectionForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const formData = new FormData(this);
+    const sectionId = formData.get('section_id');
+
+    const data = {
+        course: formData.get('course'),
+        year_level: formData.get('year_level'),
+        section_name: formData.get('section_name')
+    };
+
+    // Validate required fields
+    if (!data.course || !data.year_level || !data.section_name) {
+        showToast('All fields are required', 'error');
+        return;
+    }
+
+    console.log('Updating section:', sectionId, 'with data:', data);  // Debug log
+
+    fetch(`/api/sections/${sectionId}/`, {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': formData.get('csrfmiddlewaretoken')
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => {
+        console.log('Response status:', response.status);  // Debug log
+        return response.json();
+    })
+    .then(data => {
+        console.log('Response data:', data);  // Debug log
+        if (data.status === 'success') {
+            showToast('Section updated successfully', 'success');
+            bootstrap.Modal.getInstance(document.getElementById('editSectionModal')).hide();
+            localStorage.setItem('activeTab', 'sections');
+            setTimeout(() => location.reload(), 1000);
+        } else {
+            const errorMessage = typeof data.message === 'object' 
+                ? Object.values(data.message).join('. ') 
+                : data.message;
+            throw new Error(errorMessage || 'Failed to update section');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showToast('Failed to update section: ' + error.message, 'error');
+    });
+});
+
+function deleteSection(sectionId) {
+    if (confirm('Are you sure you want to delete this section?')) {
+        fetch(`/api/sections/${sectionId}/`, {
+            method: 'DELETE',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                localStorage.setItem('activeTab', 'sections');
+                location.reload();
+            } else {
+                showToast(data.message || 'Failed to delete section', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showToast('Failed to delete section', 'error');
+        });
+    }
+}
+
+// Course CRUD Operations
+document.getElementById('courseForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const formData = new FormData(this);
+    
+    // Validate input
+    const courseAbv = formData.get('course_abv').trim();
+    const courseName = formData.get('course_name').trim();
+    
+    if (!courseAbv || !courseName) {
+        showToast('All fields are required', 'error');
+        return;
+    }
+
+    const data = {
+        course_abv: courseAbv,
+        course_name: courseName
+    };
+
+    console.log('Creating course with data:', data);  // Debug log
+    
+    fetch('/api/courses/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': formData.get('csrfmiddlewaretoken')
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(data => {
+        console.log('Response:', data);  // Debug log
+        if (data.status === 'success') {
+            showToast('Course created successfully', 'success');
+            bootstrap.Modal.getInstance(document.getElementById('addCourseModal')).hide();
+            setTimeout(() => location.reload(), 1000);
+        } else {
+            const errorMessage = typeof data.message === 'object' 
+                ? Object.values(data.message).join('. ') 
+                : data.message;
+            throw new Error(errorMessage || 'Failed to create course');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showToast('Failed to create course: ' + error.message, 'error');
+    });
+});
+
+function editCourse(courseAbv) {
+    console.log("Editing course:", courseAbv);
+    fetch(`/api/courses/${courseAbv}/`, {
+        method: 'GET',
+        headers: {
+            'Accept': 'application/json',
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        }
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
+        }
+        return response.json();
+    })
+    .then(data => {
+        console.log("Retrieved course data:", data);
+        if (data.status === 'success' && data.data) {
+            document.getElementById('edit_course_abv').value = data.data.course_abv;
+            document.getElementById('edit_course_name').value = data.data.course_name;
+            document.getElementById('original_course_abv').value = data.data.course_abv;
+            
+            new bootstrap.Modal(document.getElementById('editCourseModal')).show();
+        } else {
+            throw new Error(data.message || 'Invalid response format');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showToast('Failed to load course data: ' + error.message, 'error');
+    });
+}
+
+document.getElementById('editCourseForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const formData = new FormData(this);
+    const originalCourseAbv = formData.get('original_course_abv');
+
+    fetch(`/api/courses/${originalCourseAbv}/`, {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': formData.get('csrfmiddlewaretoken')
+        },
+        body: JSON.stringify({
+            course_abv: formData.get('course_abv'),
+            course_name: formData.get('course_name')
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            showToast('Course updated successfully', 'success');
+            bootstrap.Modal.getInstance(document.getElementById('editCourseModal')).hide();
+            setTimeout(() => location.reload(), 1000);
+        } else {
+            throw new Error(data.message || 'Failed to update course');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showToast('Failed to update course: ' + error.message, 'error');
+    });
+});
+
+function deleteCourse(courseAbv) {
+    if (confirm('Are you sure you want to delete this course?')) {
+        fetch(`/api/courses/${courseAbv}/`, {
+            method: 'DELETE',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                showToast('Course deleted successfully', 'success');
+                setTimeout(() => location.reload(), 1000);
+            } else {
+                throw new Error(data.message || 'Failed to delete course');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showToast('Failed to delete course: ' + error.message, 'error');
+        });
+    }
+}
+
+// Filter functionality
+document.getElementById('courseFilter').addEventListener('change', filterSections);
+document.getElementById('yearFilter').addEventListener('change', filterSections);
+
+function filterSections() {
+    const courseFilter = document.getElementById('courseFilter').value;
+    const yearFilter = document.getElementById('yearFilter').value;
+    const rows = document.querySelectorAll('tbody tr');
+
+    rows.forEach(row => {
+        const courseCell = row.cells[0]?.textContent || '';
+        const yearCell = row.cells[1]?.textContent || '';
+        const yearNumber = yearCell.match(/\d+/)?.[0] || '';
+
+        const matchesCourse = !courseFilter || courseCell.includes(courseFilter);
+        const matchesYear = !yearFilter || yearNumber === yearFilter;
+
+        row.style.display = matchesCourse && matchesYear ? '' : 'none';
+    });
+}
+
+// Toast notification function
+function showToast(message, type = 'success') {
+    const toast = document.getElementById('toast');
+    const toastMessage = document.getElementById('toastMessage');
+    const toastIcon = document.getElementById('toastIcon');
+    
+    toastMessage.textContent = message;
+    toastIcon.className = type === 'success' 
+        ? 'fas fa-check-circle text-green-500 text-xl mr-3'
+        : 'fas fa-exclamation-circle text-red-500 text-xl mr-3';
+    
+    toast.classList.remove('translate-x-full');
+    setTimeout(() => toast.classList.add('translate-x-full'), 3000);
+}
+
+// Add the dropdown toggle function
+function toggleDropdown(button) {
+    // Close all other dropdowns
+    document.querySelectorAll('.dropdown-menu').forEach(menu => {
+        if (menu !== button.nextElementSibling) {
+            menu.classList.add('hidden');
+        }
+    });
+
+    const menu = button.nextElementSibling;
+    menu.classList.toggle('hidden');
+
+    // Handle outside clicks
+    document.addEventListener('click', function closeMenu(e) {
+        if (!button.contains(e.target) && !menu.contains(e.target)) {
+            menu.classList.add('hidden');
+            document.removeEventListener('click', closeMenu);
+        }
+    });
+}
+
+// Add click handler to prevent closing when clicking inside dropdown
+document.querySelectorAll('.dropdown-menu').forEach(menu => {
+    menu.addEventListener('click', (e) => e.stopPropagation());
+});
+
+window.addEventListener('load', function() {
+    if (window.location.hash === '#sections') {
+        switchTab('sections');
+        window.location.hash = '';
+    }
+});
+</script>
+
+<style>
+/* Add these styles in the head or style section */
+.modal input,
+.modal select {
+    @apply border border-gray-300;
+    border-width: 1px !important;
+}
+
+.modal input:focus,
+.modal select:focus {
+    @apply ring-2 ring-[#006837]/20 border-[#006837];
+}
+
+/* Fix input field styling */
+.modal .form-field input,
+.modal .form-field select {
+    @apply w-full px-4 py-3 rounded-xl border border-gray-300 text-gray-700 bg-white;
+    border: 1px solid #e5e7eb !important;
+}
+
+/* Add focus state */
+.modal .form-field input:focus,
+.modal .form-field select:focus {
+    @apply outline-none ring-2 ring-[#006837]/20 border-[#006837];
+}
+
+.tab-active {
+    @apply border-[#006837] text-[#006837];
+}
+</style>
+{% endblock %}
